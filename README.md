@@ -42,7 +42,7 @@ It is NoSQL Database without schema; The stored data will look like the Data Dia
 
 Data Diagram  
 <div style="text-align:center">
-  <img src="img/ERD.png" style="max-width:300px">
+  <img src="img/ERD.png" width="250em">
 </div>
 
 <details>
