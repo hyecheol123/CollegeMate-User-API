@@ -5,6 +5,13 @@
  */
 
 import * as express from 'express';
+import * as Cosmos from '@azure/cosmos';
+import User from '../datatypes/User/User';
+import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
+import ForbiddenError from '../exceptions/ForbiddenError';
+import BadRequestError from '../exceptions/BadRequestError';
+import UnauthenticatedError from '../exceptions/UnauthenticatedError';
+import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 
 // Path: /user
 const userRouter = express.Router();
@@ -44,9 +51,49 @@ const userRouter = express.Router();
 //   // TODO
 // });
 
-// // GET: /user/check-nickname
-// userRouter.get('/check-nickname', async (req, res, next) => {
-//   // TODO
-// });
+// GET: /user/check-nickname
+userRouter.get('/check-nickname', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Check Origin header or application key
+    if (
+      req.header('Origin') !== req.app.get('webpageOrigin') &&
+      !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
+    ) {
+      throw new ForbiddenError();
+    }
+
+    // Check request body
+    const nicknameVerifyRequest: {nickname: string} = req.body;
+    if (
+      validateVerifyNicknameRequest(nicknameVerifyRequest) &&
+      nicknameVerifyRequest.nickname === undefined
+    ) {
+      throw new BadRequestError();
+    }
+
+    // Header check - serverAdminToken
+    const accessToken = req.header('X-ACCESS-TOKEN');
+    if (accessToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    verifyAccessToken(accessToken, req.app.get('jwtAccessKey'));
+
+    // DB operation - check nickname availability
+    const nicknames: string[] = await User.readNicknames(dbClient);
+    let available = true;
+    if (nicknames.length !== 0) {
+      for (const nickname of nicknames) {
+        if (nickname === nicknameVerifyRequest.nickname) {
+          available = false;
+        }
+      }
+    }
+    res.status(200).json({available});
+  } catch (e) {
+    next(e);
+  }
+});
 
 export default userRouter;
