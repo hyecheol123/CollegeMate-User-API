@@ -9,6 +9,7 @@ import {CosmosClient} from '@azure/cosmos';
 import * as cookieParser from 'cookie-parser';
 import ServerConfig from './ServerConfig';
 import HTTPError from './exceptions/HTTPError';
+import userRouter from './routes/user';
 
 /**
  * Class contains Express Application and other relevant instances/functions
@@ -43,6 +44,7 @@ export default class ExpressServer {
     // Origin and Application Key
     this.app.set('webpageOrigin', config.webpageOrigin);
     this.app.set('applicationKey', config.applicationKey);
+    this.app.set('serverAdminKey', config.serverAdminKey);
 
     // Only Allow GET, POST, DELETE, PUT, PATCH method
     this.app.use(
@@ -65,6 +67,7 @@ export default class ExpressServer {
     );
 
     // TODO: Routers
+    this.app.use('/user', userRouter);
 
     // Default Error Handler
     this.app.use(
@@ -88,6 +91,8 @@ export default class ExpressServer {
       res.status(404).send({error: 'Not Found'});
     });
   }
+
+  // TODO: Asyncronously set serverAdminToken
 
   /**
    * CLose Server
