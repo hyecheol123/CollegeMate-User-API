@@ -62,6 +62,29 @@ export default class TestEnv {
     }
     this.dbClient = dbClient.database(this.testConfig.db.databaseId);
 
+    // user container
+    const containerOps = await this.dbClient.containers.create({
+      id: 'user',
+      indexingPolicy: {
+        indexingMode: 'consistent',
+        automatic: true,
+        includedPaths: [{path: '/*'}],
+        excludedPaths: [
+          {path: '/"nicknameChangedAt"/?'},
+          {path: '/"deletedAt"/?'},
+          {path: '/"lockedDescription"/?'},
+          {path: '/"lockedAt"/?'},
+          {path: '/"signUpDate"/?'},
+          {path: '/"_etag"/?'},
+        ],
+      },
+    });
+    /* istanbul ignore next */
+    if (containerOps.statusCode !== 201) {
+      throw new Error(JSON.stringify(containerOps));
+    }
+    // user data is generated whenever needed
+
     // Setup Express Server
     this.expressServer = new ExpressServer(this.testConfig);
   }

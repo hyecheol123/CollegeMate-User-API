@@ -30,6 +30,8 @@ export default class User {
    * @param {Date | string} lastLogin - last login date of the user
    * @param {Date | string} signUpDate - sign up date of the user
    * @param {Date | string} nicknameChanged - nickname changed date of the user
+   * @param {boolean} deleted - whether the user is deleted or not
+   * @param {boolean} locked - whether the user is locked or not
    * @param {string} major - major of the user
    * @param {number} graduationYear - graduation year of the user
    * @param {string} tncVersion - terms and conditions version of the user
@@ -40,6 +42,8 @@ export default class User {
     lastLogin: Date | string,
     signUpDate: Date | string,
     nicknameChanged: Date | string,
+    deleted: boolean,
+    locked: boolean,
     major: string,
     graduationYear: number,
     tncVersion: string
@@ -49,8 +53,8 @@ export default class User {
     this.lastLogin = lastLogin;
     this.signUpDate = signUpDate;
     this.nicknameChanged = nicknameChanged;
-    this.deleted = false; // default value
-    this.locked = false; // default value
+    this.deleted = deleted;
+    this.locked = locked;
     this.major = major;
     this.graduationYear = graduationYear;
     this.tncVersion = tncVersion;
@@ -70,6 +74,6 @@ export default class User {
           query: 'SELECT c.nickname FROM c WHERE c.deleted = false',
         })
         .fetchAll()
-    ).resources;
+    ).resources.map(user => user.nickname);
   }
 }

@@ -12,6 +12,7 @@ import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
+import HTTPError from '../exceptions/HTTPError';
 
 // Path: /user
 const userRouter = express.Router();
@@ -66,10 +67,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
 
     // Check request body
     const nicknameVerifyRequest: {nickname: string} = req.body;
-    if (
-      validateVerifyNicknameRequest(nicknameVerifyRequest) &&
-      nicknameVerifyRequest.nickname === undefined
-    ) {
+    if (!validateVerifyNicknameRequest(nicknameVerifyRequest)) {
       throw new BadRequestError();
     }
 
@@ -81,16 +79,19 @@ userRouter.get('/check-nickname', async (req, res, next) => {
     verifyAccessToken(accessToken, req.app.get('jwtAccessKey'));
 
     // DB operation - check nickname availability
-    const nicknames: string[] = await User.readNicknames(dbClient);
+    let nicknames: string[] = [];
+    nicknames = await User.readNicknames(dbClient);
+
     let available = true;
     if (nicknames.length !== 0) {
       for (const nickname of nicknames) {
         if (nickname === nicknameVerifyRequest.nickname) {
           available = false;
+          break;
         }
       }
     }
-    res.status(200).json({available});
+    res.status(200).json({isAvailable: available});
   } catch (e) {
     next(e);
   }
