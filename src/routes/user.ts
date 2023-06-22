@@ -7,7 +7,7 @@
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
 import User from '../datatypes/User/User';
-import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
+import { validateVerifyNicknameRequest } from '../functions/inputValidator/validateVerifyNicknameRequest';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
@@ -65,18 +65,18 @@ userRouter.get('/check-nickname', async (req, res, next) => {
       throw new ForbiddenError();
     }
 
-    // Check request body
-    const nicknameVerifyRequest: {nickname: string} = req.body;
-    if (!validateVerifyNicknameRequest(nicknameVerifyRequest)) {
-      throw new BadRequestError();
-    }
-
     // Header check - serverAdminToken
     const accessToken = req.header('X-ACCESS-TOKEN');
     if (accessToken === undefined) {
       throw new UnauthenticatedError();
     }
     verifyAccessToken(accessToken, req.app.get('jwtAccessKey'));
+
+    // Check request body
+    const nicknameVerifyRequest: { nickname: string } = req.body;
+    if (!validateVerifyNicknameRequest(nicknameVerifyRequest)) {
+      throw new BadRequestError();
+    }
 
     // DB operation - check nickname availability
     let nicknames: string[] = [];
@@ -91,7 +91,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
         }
       }
     }
-    res.status(200).json({isAvailable: available});
+    res.status(200).json({ isAvailable: available });
   } catch (e) {
     next(e);
   }

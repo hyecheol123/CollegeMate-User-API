@@ -71,7 +71,7 @@ export default class User {
       await dbClient
         .container(USER)
         .items.query({
-          query: 'SELECT c.nickname FROM c WHERE c.deleted = false',
+          query: 'SELECT user.nickname FROM user WHERE user.deleted = false',
         })
         .fetchAll()
     ).resources.map(user => user.nickname);
