@@ -12,7 +12,6 @@ import TestEnv from '../../TestEnv';
 import ExpressServer from '../../../src/ExpressServer';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
 import User from '../../../src/datatypes/User/User';
-import createAccessToken from '../../../src/functions/JWT/createAccessToken';
 
 describe('GET /user/check-nickname - Verify Nickname', () => {
   let testEnv: TestEnv;
@@ -31,14 +30,24 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
 
     // Create Access Token
     // Valid Access Token
-    accessTokenMap.valid = createAccessToken(
-      'user@wisc.edu',
-      testEnv.testConfig.jwt.secretKey
+    let tokenContent: AuthToken = {
+      id: 'user@wisc.edu',
+      type: 'access',
+      tokenType: 'user',
+    };
+    // Generate AccessToken
+    accessTokenMap.valid = jwt.sign(
+      tokenContent,
+      testEnv.testConfig.jwt.secretKey,
+      {
+        algorithm: 'HS512',
+        expiresIn: '10m',
+      }
     );
 
     // Wrong Access Token
     // Token Content
-    let tokenContent: AuthToken = {
+    tokenContent = {
       id: 'wrong@wisc.edu',
       type: 'refresh',
       tokenType: 'user',
@@ -199,7 +208,10 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
       new Date().toISOString(),
       new Date().toISOString(),
       false,
+      undefined,
       false,
+      undefined,
+      undefined,
       'Computer Science',
       2024,
       '0.0.1'
@@ -212,7 +224,10 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
       new Date().toISOString(),
       new Date().toISOString(),
       false,
+      undefined,
       false,
+      undefined,
+      undefined,
       'Computer Science',
       2024,
       '0.0.1'
@@ -252,7 +267,10 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
       new Date().toISOString(),
       new Date().toISOString(),
       false,
+      undefined,
       false,
+      undefined,
+      undefined,
       'Computer Science',
       2024,
       '0.0.1'
@@ -265,7 +283,10 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
       new Date().toISOString(),
       new Date().toISOString(),
       false,
+      undefined,
       false,
+      undefined,
+      undefined,
       'Computer Science',
       2024,
       '0.0.1'
@@ -289,5 +310,63 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
       .send({nickname: 'steve'});
     expect(response.status).toBe(200);
     expect(response.body.isAvailable).toBe(false);
+  });
+
+  test('Success - Deleted Nickname', async () => {
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    // Create a new user
+
+    let user = new User(
+      'steve@wisc.edu',
+      'steve',
+      new Date().toISOString(),
+      new Date().toISOString(),
+      new Date().toISOString(),
+      true,
+      new Date().toISOString(),
+      false,
+      undefined,
+      undefined,
+      'Computer Science',
+      2024,
+      '0.0.1'
+    );
+    await testEnv.dbClient.container('user').items.create(user);
+    user = new User(
+      'drag@wisc.edu',
+      'drag',
+      new Date().toISOString(),
+      new Date().toISOString(),
+      new Date().toISOString(),
+      false,
+      undefined,
+      true,
+      'he is bad boy',
+      new Date().toISOString(),
+      'Computer Science',
+      2024,
+      '0.0.1'
+    );
+    await testEnv.dbClient.container('user').items.create(user);
+
+    // Request From Web
+    let response = await request(testEnv.expressServer.app)
+      .get('/user/check-nickname')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({Origin: 'https://collegemate.app'})
+      .send({nickname: 'drag'});
+    expect(response.status).toBe(200);
+    expect(response.body.isAvailable).toBe(false);
+
+    // Request From App
+    response = await request(testEnv.expressServer.app)
+      .get('/user/check-nickname')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
+      .send({nickname: 'steve'});
+    expect(response.status).toBe(200);
+    expect(response.body.isAvailable).toBe(true);
   });
 });

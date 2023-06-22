@@ -74,7 +74,7 @@ export default class TestEnv {
           {path: '/"deletedAt"/?'},
           {path: '/"lockedDescription"/?'},
           {path: '/"lockedAt"/?'},
-          {path: '/"signUpDate"/?'},
+          {path: '/"graduationYear"/?'},
           {path: '/"_etag"/?'},
         ],
       },

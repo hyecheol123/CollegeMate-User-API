@@ -7,7 +7,7 @@
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
 import User from '../datatypes/User/User';
-import { validateVerifyNicknameRequest } from '../functions/inputValidator/validateVerifyNicknameRequest';
+import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
@@ -72,25 +72,18 @@ userRouter.get('/check-nickname', async (req, res, next) => {
     verifyAccessToken(accessToken, req.app.get('jwtAccessKey'));
 
     // Check request body
-    const nicknameVerifyRequest: { nickname: string } = req.body;
+    const nicknameVerifyRequest: {nickname: string} = req.body;
     if (!validateVerifyNicknameRequest(nicknameVerifyRequest)) {
       throw new BadRequestError();
     }
 
     // DB operation - check nickname availability
-    let nicknames: string[] = [];
-    nicknames = await User.readNicknames(dbClient);
+    const available = await User.checkNickname(
+      dbClient,
+      nicknameVerifyRequest.nickname
+    );
 
-    let available = true;
-    if (nicknames.length !== 0) {
-      for (const nickname of nicknames) {
-        if (nickname === nicknameVerifyRequest.nickname) {
-          available = false;
-          break;
-        }
-      }
-    }
-    res.status(200).json({ isAvailable: available });
+    res.status(200).json({isAvailable: available});
   } catch (e) {
     next(e);
   }
