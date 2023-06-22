@@ -64,7 +64,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
       throw new ForbiddenError();
     }
 
-    // Header check - serverAdminToken
+    // Header check - access token
     const accessToken = req.header('X-ACCESS-TOKEN');
     if (accessToken === undefined) {
       throw new UnauthenticatedError();
