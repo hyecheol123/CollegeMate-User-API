@@ -1,21 +1,22 @@
 /**
- * Function to retrieve latest Terms and Conditions from Terms and Conditions API
+ * Function to retrieve latest Terms and Conditions from Miscellaneous API
  *
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 
 import TnC from './TnC';
-import NotFoundError from '../../exceptions/NotFoundError';
+import {Request} from 'express';
 
 /**
- * Function to retrieve latest TnC from Terms and Conditions API
+ * Function to retrieve latest TnC from Miscellaneous API
  *
- * @return {Promise<User>} User Profile
+ * @param {Request} req - Express Request object
+ * @return {Promise<TnC>} User Profile
  */
-export default async function getUserProfile(): Promise<TnC> {
+export default async function getUserProfile(req: Request): Promise<TnC> {
   const response = await fetch('https://api.collegemate.app/tnc', {
     method: 'GET',
-    headers: {'X-APPLICATION-KEY': '<API-Servers>'},
+    headers: {'X-APPLICATION-KEY': req.app.get('serverApplicationKey')},
   });
 
   if (response.status === 403) {
@@ -23,8 +24,7 @@ export default async function getUserProfile(): Promise<TnC> {
   }
 
   if (response.status === 404) {
-    // TnC not found
-    throw new NotFoundError();
+    throw new Error('[Fail on retreiving latest TnC : DB entry not found]');
   }
 
   if (response.status !== 200) {
@@ -32,10 +32,5 @@ export default async function getUserProfile(): Promise<TnC> {
   }
 
   // Found latest TnC
-  const latestTnC = await response.json();
-  return {
-    version: latestTnC.version,
-    createdAt: latestTnC.createdAt,
-    content: latestTnC.content,
-  };
+  return await response.json();
 }

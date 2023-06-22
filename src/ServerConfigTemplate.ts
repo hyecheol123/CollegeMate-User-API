@@ -25,6 +25,7 @@ export default abstract class ServerConfigTemplate {
   readonly domainPath: ServerDomainPathObj;
   readonly applicationKey: string[];
   readonly webpageOrigin: string;
+  readonly serverApplicationKey: string;
   readonly serverAdminKey: string;
 
   /**
@@ -39,6 +40,7 @@ export default abstract class ServerConfigTemplate {
     this.domainPath = config.serverDomainPath;
     this.applicationKey = config.applicationKey;
     this.webpageOrigin = config.webpageOrigin;
+    this.serverApplicationKey = config.serverApplicationKey;
     this.serverAdminKey = config.serverAdminKey;
   }
 
