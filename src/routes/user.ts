@@ -56,16 +56,7 @@ userRouter.post('/', async (req, res, next) => {
     }
 
     // Check if the TnC version is the latest
-    let latestTnCVersion: string | undefined;
-    try {
-      latestTnCVersion = (await getTnC(req)).version;
-    } catch (e) {
-      // TODO: Figure out what to do when there is no TnC
-      if ((e as HTTPError).statusCode === 404) {
-        throw new ConflictError();
-      }
-      throw e;
-    }
+    const latestTnCVersion = (await getTnC(req)).version;
 
     if (
       !latestTnCVersion ||
