@@ -11,11 +11,11 @@ import UserProfileResponseObj from '../../datatypes/User/UserProfileResponseObj'
  * Method to format user profile response object
  *
  * @param {User} user - user object
- * @param {boolean} isServerAdmin - whether the user is server admin or not
+ * @param {string} requestUserStatus - relationship between request user and target user
  */
 export default function formatUserProfileResponseObj(
   user: User,
-  isServerAdmin: boolean
+  requestUserStatus: string
 ): UserProfileResponseObj {
   const userProfileResponseObj: UserProfileResponseObj = {
     nickname: user.nickname,
@@ -23,7 +23,7 @@ export default function formatUserProfileResponseObj(
     graduationYear: user.graduationYear,
   };
 
-  if (isServerAdmin) {
+  if (requestUserStatus === 'serverAdmin') {
     userProfileResponseObj.lastLogin = user.lastLogin;
     userProfileResponseObj.signUpDate = user.signUpDate;
     userProfileResponseObj.nicknameChanged = user.nicknameChanged;
@@ -37,6 +37,9 @@ export default function formatUserProfileResponseObj(
       userProfileResponseObj.lockedAt = user.lockedAt;
     }
     userProfileResponseObj.tncVersion = user.tncVersion;
+  } else if (requestUserStatus === 'self') {
+    userProfileResponseObj.lastLogin = user.lastLogin;
+    userProfileResponseObj.nicknameChanged = user.nicknameChanged;
   }
 
   return userProfileResponseObj;
