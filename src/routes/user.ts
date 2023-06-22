@@ -12,7 +12,6 @@ import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
-import HTTPError from '../exceptions/HTTPError';
 
 // Path: /user
 const userRouter = express.Router();
