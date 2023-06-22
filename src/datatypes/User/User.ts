@@ -81,6 +81,20 @@ export default class User {
   }
 
   /**
+   * Create a new user entry
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {User} user User object to create
+   */
+  static async create(dbClient: Cosmos.Database, user: User): Promise<void> {
+    // Create a new user entry
+    user.lastLogin = new Date().toISOString();
+    user.signUpDate = new Date().toISOString();
+    user.nicknameChanged = new Date().toISOString();
+    await dbClient.container(USER).items.create(user);
+  }
+
+  /**
    * Check availability of the nickname
    *
    * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)

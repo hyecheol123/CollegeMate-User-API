@@ -12,14 +12,97 @@ import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
+import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
+import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostRequest';
+import getTnC from '../datatypes/TermsAndCondition/getTnC';
+import HTTPError from '../exceptions/HTTPError';
+import ConflictError from '../exceptions/ConflictError';
 
 // Path: /user
 const userRouter = express.Router();
 
-// // POST: /user
-// userRouter.post('/', async (req, res, next) => {
-//   // TODO
-// });
+// POST: /user
+userRouter.post('/', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Check Origin header or application key
+    if (
+      req.header('Origin') !== req.app.get('webpageOrigin') &&
+      !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
+    ) {
+      throw new ForbiddenError();
+    }
+
+    // Header check - access token
+    const accessToken = req.header('X-ACCESS-TOKEN');
+    if (accessToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    const tokenContents = verifyAccessToken(
+      accessToken,
+      req.app.get('jwtAccessKey')
+    );
+
+    // Check request body
+    const userPostRequestObj = req.body as UserPostRequestObj;
+    if (!validateUserPostRequest(userPostRequestObj)) {
+      throw new BadRequestError();
+    }
+
+    // Check if access token has the same email as the request body
+    if (tokenContents.id !== userPostRequestObj.email) {
+      throw new ForbiddenError();
+    }
+
+    // Check if the TnC version is the latest
+    let latestTnCVersion: string | undefined;
+    try {
+      latestTnCVersion = (await getTnC()).version;
+    } catch (e) {
+      if ((e as HTTPError).statusCode === 404) {
+        // TODO: Figure out what to do when there is no TnC
+        throw new ConflictError();
+      }
+      throw e;
+    }
+    if (
+      !latestTnCVersion ||
+      latestTnCVersion !== userPostRequestObj.tncVersion
+    ) {
+      throw new ConflictError();
+    }
+
+    // DB operation - check nickname availability
+    const available = await User.checkNickname(
+      dbClient,
+      userPostRequestObj.nickname
+    );
+    if (!available) {
+      throw new BadRequestError();
+    }
+
+    // DB operation - create user
+    const user = new User(
+      userPostRequestObj.email,
+      userPostRequestObj.nickname,
+      new Date(),
+      new Date(),
+      new Date(),
+      false,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      userPostRequestObj.major,
+      userPostRequestObj.graduationYear,
+      userPostRequestObj.tncVersion
+    );
+    await User.create(dbClient, user);
+  } catch (e) {
+    next(e);
+  }
+});
 
 // // DELETE: /user/{base64Email}
 // userRouter.delete('/:base64Email', async (req, res, next) => {
@@ -64,7 +147,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
       throw new ForbiddenError();
     }
 
-    // Header check - serverAdminToken
+    // Header check - access token
     const accessToken = req.header('X-ACCESS-TOKEN');
     if (accessToken === undefined) {
       throw new UnauthenticatedError();
