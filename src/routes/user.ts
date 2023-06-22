@@ -12,6 +12,9 @@ import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
+import NotFoundError from '../exceptions/NotFoundError';
+import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import formatUserProfileResponseObj from '../functions/responseFormatter/formatUserProfileResponseObj';
 
 // Path: /user
 const userRouter = express.Router();
@@ -31,10 +34,56 @@ const userRouter = express.Router();
 //   // TODO
 // });
 
-// // GET: /user/{base64Email}
-// userRouter.get('/:base64Email', async (req, res, next) => {
-//   // TODO
-// });
+// GET: /user/{base64Email}
+userRouter.get('/:base64Email', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Header check - access token or Origin header or application key
+    const serverToken = req.header('X-SERVER-TOKEN');
+    if (
+      serverToken === undefined &&
+      req.header('Origin') !== req.app.get('webpageOrigin') &&
+      !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
+    ) {
+      if (serverToken === undefined) {
+        throw new UnauthenticatedError();
+      }
+      throw new ForbiddenError();
+    }
+    // Check server admin token or access token - which is provided
+    if (serverToken !== undefined) {
+      verifyAccessToken(serverToken, req.app.get('jwtAccessKey'));
+    } else {
+      const accessToken = req.header('X-ACCESS-TOKEN');
+      if (accessToken === undefined) {
+        throw new UnauthenticatedError();
+      }
+      verifyAccessToken(accessToken, req.app.get('jwtAccessKey'));
+    }
+
+    // DB operation - Get user information
+    const requestUserEmail = req.params.base64Email;
+    if (requestUserEmail === undefined) {
+      throw new BadRequestError();
+    }
+    const requestUser = await User.read(dbClient, requestUserEmail);
+    if (requestUser === undefined) {
+      throw new NotFoundError();
+    }
+
+    // Response
+    let responseUser: UserProfileResponseObj;
+    if (serverToken !== undefined) {
+      responseUser = formatUserProfileResponseObj(requestUser, true);
+    } else {
+      responseUser = formatUserProfileResponseObj(requestUser, false);
+    }
+    res.status(200).json(responseUser);
+  } catch (e) {
+    next(e);
+  }
+});
 
 // // POST: /user/{base64Email}/accepttnc
 // userRouter.post('/:base64Email/accepttnc', async (req, res, next) => {

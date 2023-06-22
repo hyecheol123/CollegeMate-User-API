@@ -102,4 +102,42 @@ export default class User {
       ).resources.length === 0
     );
   }
+
+  /**
+   * Retrieve user information from the database
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} email email of the user
+   */
+  static async read(
+    dbClient: Cosmos.Database,
+    email: string
+  ): Promise<User | undefined> {
+    // Query that retrieves user information from the database
+    const result = await dbClient
+      .container(USER)
+      .items.query({
+        query: `SELECT * FROM user WHERE user.email = "${email}"`,
+      })
+      .fetchAll();
+    if (result.resources.length === 0) {
+      return undefined;
+    }
+    const user = result.resources[0];
+    return new User(
+      user.email,
+      user.nickname,
+      user.lastLogin,
+      user.signUpDate,
+      user.nicknameChanged,
+      user.deleted,
+      user.deletedAt,
+      user.locked,
+      user.lockedDescription,
+      user.lockedAt,
+      user.major,
+      user.graduationYear,
+      user.tncVersion
+    );
+  }
 }
