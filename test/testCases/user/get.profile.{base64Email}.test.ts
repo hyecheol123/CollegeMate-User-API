@@ -131,32 +131,115 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
   });
 
   test('Fail - Neither Admin or from Origin nor App', async () => {
-    fail();
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    //request without any token or key
+    const response = await request(testEnv.expressServer.app).get(
+      `/user/profile/${userMap.steve.email}`
+    );
+
+    expect(response.status).toBe(403);
   });
 
   test('Fail - No Access nor Admin Token', async () => {
-    fail();
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    //request without any access or admin token
+    const response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${userMap.steve.email}`)
+      .set({Origin: 'https://collegemate.app'});
+
+    expect(response.status).toBe(401);
   });
 
   test('Fail - Expired Access or Admin Token', async () => {
-    fail();
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    //request with an expired access token
+    const response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${userMap.steve.email}`)
+      .set({'X-ACCESS-TOKEN': accessTokenMap.expired})
+      .set({Origin: 'https://collegemate.app'});
+
+    expect(response.status).toBe(401);
   });
 
+  //**Test Admin with Wrong Token, Wrong Access Token and more if you think of it
   test('Fail - Wrong Token', async () => {
-    // Test Admin with Wrong Token, Wrong Access Token and more if you think of it
-    fail();
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    //request with a wrong access token
+    const response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${userMap.steve.email}`)
+      .set({'X-ACCESS-TOKEN': accessTokenMap.wrong})
+      .set({Origin: 'https://collegemate.app'});
+
+    expect(response.status).toBe(401);
   });
 
   test('Fail - Email not found', async () => {
-    fail();
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    //request with an invalid email
+    const response = await request(testEnv.expressServer.app)
+      .get('/user/profile/doesNotExist@wisc.edu')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({Origin: 'https://collegemate.app'});
+
+    expect(response.status).toBe(404);
   });
 
   test('Success - Admin', async () => {
-    fail();
+    // Generate admin token
+    const tokenContent: AuthToken = {
+      id: 'testAdmin',
+      type: 'access',
+      tokenType: 'serverAdmin',
+      accountType: 'admin',
+    };
+    const token = jwt.sign(tokenContent, testEnv.testConfig.jwt.secretKey, {
+      algorithm: 'HS512',
+      expiresIn: '10m',
+    });
+
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    //request with an admin token
+    const response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${userMap.steve.email}`)
+      .set({'X-SERVER-TOKEN': token})
+      .set({Origin: 'https://collegemate.app'});
+
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('steve');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(response.body).not.toHaveProperty('lastLogin');
+    expect(response.body).not.toHaveProperty('nicknameChanged');
   });
 
   test('Success - Self Request', async () => {
-    fail();
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    //request self
+    const response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${userMap.drag.email}`)
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({Origin: 'https://collegemate.app'});
+
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('drag');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(response.body).not.toHaveProperty('lastLogin');
+    expect(response.body).not.toHaveProperty('nicknameChanged');
   });
 
   test.only('Success - Other Users Request', async () => {
