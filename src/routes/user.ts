@@ -45,7 +45,7 @@ userRouter.post('/', async (req, res, next) => {
     );
 
     // Check request body
-    const userPostRequestObj = req.body as UserPostRequestObj;
+    const userPostRequestObj: UserPostRequestObj = req.body;
     if (!validateUserPostRequest(userPostRequestObj)) {
       throw new BadRequestError();
     }
@@ -60,12 +60,13 @@ userRouter.post('/', async (req, res, next) => {
     try {
       latestTnCVersion = (await getTnC()).version;
     } catch (e) {
+      // TODO: Figure out what to do when there is no TnC
       if ((e as HTTPError).statusCode === 404) {
-        // TODO: Figure out what to do when there is no TnC
         throw new ConflictError();
       }
       throw e;
     }
+
     if (
       !latestTnCVersion ||
       latestTnCVersion !== userPostRequestObj.tncVersion
@@ -99,6 +100,7 @@ userRouter.post('/', async (req, res, next) => {
       userPostRequestObj.tncVersion
     );
     await User.create(dbClient, user);
+    res.status(201).send();
   } catch (e) {
     next(e);
   }

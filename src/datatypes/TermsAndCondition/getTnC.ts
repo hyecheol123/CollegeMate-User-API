@@ -13,7 +13,7 @@ import NotFoundError from '../../exceptions/NotFoundError';
  * @return {Promise<User>} User Profile
  */
 export default async function getUserProfile(): Promise<TnC> {
-  const response = await fetch(`https://api.collegemate.app/tnc`, {
+  const response = await fetch('https://api.collegemate.app/tnc', {
     method: 'GET',
     headers: {'X-APPLICATION-KEY': '<API-Servers>'},
   });
