@@ -113,13 +113,31 @@ export default class User {
    */
   static async read(dbClient: Cosmos.Database, email: string): Promise<User> {
     // Query that retrieves user information from the database
-    const dbOps = await dbClient.container(USER).item(email).read<User>();
-
-    if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
+    const result = await dbClient
+      .container(USER)
+      .items.query({
+        query: `SELECT * FROM user WHERE user.email = "${email}"`,
+      })
+      .fetchAll();
+    if (result.resources.length === 0) {
       throw new NotFoundError();
     }
-
-    return dbOps.resource;
+    const user = result.resources[0];
+    return new User(
+      user.email,
+      user.nickname,
+      user.lastLogin,
+      user.signUpDate,
+      user.nicknameChanged,
+      user.deleted,
+      user.deletedAt,
+      user.locked,
+      user.lockedDescription,
+      user.lockedAt,
+      user.major,
+      user.graduationYear,
+      user.tncVersion
+    );
   }
 
   /**
