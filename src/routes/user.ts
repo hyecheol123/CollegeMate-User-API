@@ -14,6 +14,7 @@ import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
 import { validateLockUserRequest } from '../functions/inputValidator/validateLockUserRequest';
+import ConflictError from '../exceptions/ConflictError';
 
 // Path: /user
 const userRouter = express.Router();
@@ -58,21 +59,24 @@ userRouter.post('/:base64Email/lock', async (req, res, next) => {
     if (serverToken === undefined) {
       throw new UnauthenticatedError();
     }
-    verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'))
+    verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
 
     const requestUserEmail = req.params.base64Email;
 
     // Check request body
     const lockUserRequest: {description: string} = req.body;
-    if (!validateVerifyNicknameRequest(validateLockUserRequest(lockUserRequest))) {
+    if (!validateLockUserRequest(lockUserRequest)) {
       throw new BadRequestError();
     }
-    
+
     // lock User with requested email
+    if ((await User.read(dbClient, requestUserEmail)).locked) {
+      throw new ConflictError();
+    }
     await User.lock(dbClient, requestUserEmail, lockUserRequest.description);
 
     // Send email/notification to user
-    // TODO: GraphQL + Modules neded to implement this feature
+    // TODO: GraphQL + Modules needed to implement this feature
     // TODO: Implement email sending feature and notification feature
 
     // response
