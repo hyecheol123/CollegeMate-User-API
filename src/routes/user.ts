@@ -15,7 +15,7 @@ import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import NotFoundError from '../exceptions/NotFoundError';
 import formatUserProfileResponseObj from '../functions/responseFormatter/formatUserProfileResponseObj';
 import AuthToken from '../datatypes/Token/AuthToken';
-import verifyServerAdminToken from '../functions/JWT/verifyAccessToken';
+import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
 
 // Path: /user
 const userRouter = express.Router();
@@ -47,11 +47,9 @@ userRouter.get('/profile/:base64Email', async (req, res, next) => {
       req.header('Origin') !== req.app.get('webpageOrigin') &&
       !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
     ) {
-      if (serverToken === undefined) {
-        throw new UnauthenticatedError();
-      }
       throw new ForbiddenError();
     }
+
     // Check server admin token or access token - which is provided
     let tokenContents: AuthToken | undefined = undefined;
     if (serverToken !== undefined) {
