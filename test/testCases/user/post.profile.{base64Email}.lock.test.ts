@@ -272,7 +272,6 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
         const response = await request(testEnv.expressServer.app)
             .post(`/user/profile/${userMap.steve.email}/lock`)
             .set({'X-SERVER-TOKEN': token})
-            .set({Origin: 'https://collegemate.app'})
             .send({description: "Posted unauthorized advertisement to course evaluation"});
         expect(response.status).toBe(200);
         expect(response.body.locked).toBe(true);
