@@ -5,6 +5,7 @@
  */
 import * as Cosmos from '@azure/cosmos';
 import BadRequestError from '../../exceptions/BadRequestError';
+import NotFoundError from '../../exceptions/NotFoundError';
 
 const USER = 'user';
 
@@ -101,5 +102,33 @@ export default class User {
           .fetchAll()
       ).resources.length === 0
     );
+  }
+
+  /**
+   * Lock user with description provided
+   * 
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} email email of the user to lock
+   * @param {string} description description of the lock
+   */
+  static async lock(
+    dbClient: Cosmos.Database,
+    email: string,
+    description: string
+  ): Promise<void> {
+    // Query that locks the user
+    const dbOps = await dbClient
+      .container(USER)
+      .item(email)
+      .replace({
+        id: email,
+        locked: true,
+        lockedDescription: description,
+        lockedAt: new Date().toISOString(),
+      });
+
+    if (dbOps.statusCode === 404) {
+      throw new NotFoundError();
+    }
   }
 }

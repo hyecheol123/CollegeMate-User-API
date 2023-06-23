@@ -12,6 +12,8 @@ import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
+import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
+import { validateLockUserRequest } from '../functions/inputValidator/validateLockUserRequest';
 
 // Path: /user
 const userRouter = express.Router();
@@ -21,32 +23,32 @@ const userRouter = express.Router();
 //   // TODO
 // });
 
-// // DELETE: /user/{base64Email}
+// // DELETE: /user/profile/{base64Email}
 // userRouter.delete('/:base64Email', async (req, res, next) => {
 //   // TODO
 // });
 
-// // PATCH: /user/{base64Email}
+// // PATCH: /user/profile/{base64Email}
 // userRouter.patch('/:base64Email', async (req, res, next) => {
 //   // TODO
 // });
 
-// // GET: /user/{base64Email}
+// // GET: /user/profile/{base64Email}
 // userRouter.get('/:base64Email', async (req, res, next) => {
 //   // TODO
 // });
 
-// // POST: /user/{base64Email}/accepttnc
+// // POST: /user/profile/{base64Email}/accepttnc
 // userRouter.post('/:base64Email/accepttnc', async (req, res, next) => {
 //   // TODO
 // });
 
-// // POST: /user/{base64Email}/lastlogin
+// // POST: /user/profile/{base64Email}/lastlogin
 // userRouter.post('/:base64Email/lastlogin', async (req, res, next) => {
 //   // TODO
 // });
 
-// POST: /user/{base64Email}/lock
+// POST: /user/profile/{base64Email}/lock
 userRouter.post('/:base64Email/lock', async (req, res, next) => {
   const dbClient: Cosmos.Database = req.app.locals.dbClient;
 
@@ -56,6 +58,25 @@ userRouter.post('/:base64Email/lock', async (req, res, next) => {
     if (serverToken === undefined) {
       throw new UnauthenticatedError();
     }
+    verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'))
+
+    const requestUserEmail = req.params.base64Email;
+
+    // Check request body
+    const lockUserRequest: {description: string} = req.body;
+    if (!validateVerifyNicknameRequest(validateLockUserRequest(lockUserRequest))) {
+      throw new BadRequestError();
+    }
+    
+    // lock User with requested email
+    await User.lock(dbClient, requestUserEmail, lockUserRequest.description);
+
+    // Send email/notification to user
+    // TODO: GraphQL + Modules neded to implement this feature
+    // TODO: Implement email sending feature and notification feature
+
+    // response
+    res.status(200).send();
   } catch (e) {
     next(e);
   }

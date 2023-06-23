@@ -78,6 +78,9 @@ export default class TestEnv {
           {path: '/"_etag"/?'},
         ],
       },
+      uniqueKeyPolicy: {
+        uniqueKeys: [{paths: ['/nickname']}],
+      },
     });
     /* istanbul ignore next */
     if (containerOps.statusCode !== 201) {
