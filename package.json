@@ -28,6 +28,7 @@
     "testTimeout": 120000
   },
   "scripts": {
+    "prebuild": "npm run clean",
     "build": "tsc",
     "clean": "gts clean",
     "lint": "gts lint",
