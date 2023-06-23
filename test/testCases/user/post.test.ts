@@ -224,7 +224,7 @@ describe('POST /user - Create User', () => {
     expect(response.status).toBe(400);
 
     // Request Body with all wrong properties
-    const extraReqBody2 = {
+    const missingReqBody = {
       extra: 'extra',
       property: 'property',
       wrong: 'wrong',
@@ -234,11 +234,11 @@ describe('POST /user - Create User', () => {
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
-      .send(extraReqBody2);
+      .send(missingReqBody);
     expect(response.status).toBe(400);
 
     // Request Body with some properties missing
-    const extraReqBody3 = {
+    let reqBody = {
       email: userMap.valid.email,
       nickname: userMap.valid.nickname,
       major: userMap.valid.major,
@@ -249,7 +249,30 @@ describe('POST /user - Create User', () => {
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
-      .send(extraReqBody3);
+      .send(reqBody);
+    expect(response.status).toBe(400);
+
+    // RequestBody with invalid graduationYear
+    reqBody = {
+      email: userMap.valid.email,
+      nickname: userMap.valid.nickname,
+      major: userMap.valid.major,
+      graduationYear: '2500', // Invalid graduationYear too high
+      tncVersion: userMap.valid.tncVersion,
+    };
+    response = await request(testEnv.expressServer.app)
+      .post('/user')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
+      .send(reqBody);
+    expect(response.status).toBe(400);
+
+    reqBody.graduationYear = '2000'; // Invalid graduationYear too low
+    response = await request(testEnv.expressServer.app)
+      .post('/user')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
+      .send(reqBody);
     expect(response.status).toBe(400);
   });
 

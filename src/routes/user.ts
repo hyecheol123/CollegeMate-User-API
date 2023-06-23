@@ -15,7 +15,6 @@ import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostRequest';
 import getTnC from '../datatypes/TermsAndCondition/getTnC';
-import HTTPError from '../exceptions/HTTPError';
 import ConflictError from '../exceptions/ConflictError';
 
 // Path: /user
