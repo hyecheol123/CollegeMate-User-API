@@ -5,6 +5,7 @@
  */
 import * as Cosmos from '@azure/cosmos';
 import BadRequestError from '../../exceptions/BadRequestError';
+import NotFoundError from '../../exceptions/NotFoundError';
 
 const USER = 'user';
 
@@ -109,10 +110,7 @@ export default class User {
    * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
    * @param {string} email email of the user
    */
-  static async read(
-    dbClient: Cosmos.Database,
-    email: string
-  ): Promise<User | undefined> {
+  static async read(dbClient: Cosmos.Database, email: string): Promise<User> {
     // Query that retrieves user information from the database
     const result = await dbClient
       .container(USER)
@@ -121,7 +119,7 @@ export default class User {
       })
       .fetchAll();
     if (result.resources.length === 0) {
-      return undefined;
+      throw new NotFoundError();
     }
     const user = result.resources[0];
     return new User(

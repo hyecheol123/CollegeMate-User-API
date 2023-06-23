@@ -12,7 +12,6 @@ import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
-import NotFoundError from '../exceptions/NotFoundError';
 import formatUserProfileResponseObj from '../functions/responseFormatter/formatUserProfileResponseObj';
 import AuthToken from '../datatypes/Token/AuthToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
@@ -78,10 +77,8 @@ userRouter.get('/profile/:base64Email', async (req, res, next) => {
       calledUserStatus = 'serverAdmin';
     }
 
+    // DB operation - Get user information
     const requestUser = await User.read(dbClient, requestUserEmail);
-    if (requestUser === undefined) {
-      throw new NotFoundError();
-    }
 
     // Response
     const responseUser = formatUserProfileResponseObj(
