@@ -1,5 +1,5 @@
 /**
- * Jest unit test for POST /user/{base64Email} method
+ * Jest unit test for POST /user/profile/{base64Email} method
  *
  * @author Jeonghyeon Park <fishbox0923@gmail.com>
  */
@@ -15,18 +15,9 @@ import AuthToken from '../../../src/datatypes/Token/AuthToken';
 
 describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () => {
     let testEnv: TestEnv;
-    const accessTokenMap = {
-        valid: '',
-        wrong: '',
-        expired: '',
-        self: '',
-        lockedSelf: ''
-    };
     const userMap = {
         steve: {} as User,
-        drag: {} as User,
-        lockedAndDeleted: {} as User,
-        notExist: {} as User
+        locked: {} as User,
     };
 
     beforeEach(async () => {
@@ -60,22 +51,22 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
         userMap.steve = user;
         
         user = new User(
-            'lockedAndDeleted@wisc.edu',
-            'lockedAndDeleted',
+            'locked@wisc.edu',
+            'locked',
             new Date().toISOString(),
             new Date().toISOString(),
             new Date().toISOString(),
+            false,
+            undefined,
             true,
-            new Date().toISOString(),
-            true,
-            new Date().toISOString(),
+            'Posted unauthorized advertisement to course evaluation',
             new Date().toISOString(),
             'Computer Science',
             2024,
             '1.0.0'
         );
         await testEnv.dbClient.container('user').items.create(user);
-        userMap.lockedAndDeleted = user;
+        userMap.locked = user;
     });
 
     afterEach(async () => {
@@ -87,13 +78,13 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
 
         // Request without any token
         let response = await request(testEnv.expressServer.app)
-            .post(`/user/${userMap.steve.email}/lock`);
+            .post(`/user/profile/${userMap.steve.email}/lock`);
         expect(response.status).toBe(401); 
         expect(response.body.error).toBe('Unauthenticated'); 
 
         // Request without X-Server-Token
         response = await request(testEnv.expressServer.app)
-            .post(`/user/${userMap.steve.email}/lock`)
+            .post(`/user/profile/${userMap.steve.email}/lock`)
             .set({'X-OTHER-TOKEN': '<Some-Other-Value>'})
             .set({Origin: 'https://collegemate.app'});
         expect(response.status).toBe(401); 
@@ -117,7 +108,7 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
         });
         // Request
         let response = await request(testEnv.expressServer.app)
-            .post(`/user/${userMap.steve.email}/lock`)
+            .post(`/user/profile/${userMap.steve.email}/lock`)
             .set({'X-SERVER-TOKEN': token});
         expect(response.status).toBe(403);
         expect(response.body.error).toBe('Forbidden');
@@ -137,7 +128,7 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
 
         // Request
         response = await request(testEnv.expressServer.app)
-            .post(`/user/${userMap.steve.email}/lock`)
+            .post(`/user/profile/${userMap.steve.email}/lock`)
             .set({'X-SERVER-TOKEN': token});
         expect(response.status).toBe(403);
         expect(response.body.error).toBe('Forbidden');
@@ -155,7 +146,7 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
         });
         // Request
         response = await request(testEnv.expressServer.app)
-            .post(`/user/${userMap.steve.email}/lock`)
+            .post(`/user/profile/${userMap.steve.email}/lock`)
             .set({'X-SERVER-TOKEN': token});
         expect(response.status).toBe(403);
         expect(response.body.error).toBe('Forbidden');
@@ -182,7 +173,7 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
 
         // Request
         const response = await request(testEnv.expressServer.app)
-            .post(`/user/${userMap.steve.email}/lock`)
+            .post(`/user/profile/${userMap.steve.email}/lock`)
             .set({'X-SERVER-TOKEN': token});
         expect(response.status).toBe(403);
         expect(response.body.error).toBe('Forbidden');
@@ -207,10 +198,11 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
 
         // Request
         const response = await request(testEnv.expressServer.app) 
-            .post('/user/doesNotExist@wisc.edu/lock')
-            .set({'X-SERVER-TOKEN': token});
-        expect(response.status).toBe(400);//should be 404  
-        expect(response.body.error).toBe('Bad Request');//should be "Not Found"
+            .post('/user/profile/doesNotExist@wisc.edu/lock')
+            .set({'X-SERVER-TOKEN': token})
+            .send({description: "Posted unauthorized advertisement to course evaluation"});
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('Not Found');
     });
 
     test('Fail - Bad Request', async () => {
@@ -230,11 +222,35 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
 
         // Request with invalid request body
         const response = await request(testEnv.expressServer.app)
-            .post(`/user/doesNotExist@wisc.edu}/lock`)
+            .post(`/user/profile/${userMap.steve.email}/lock`)
             .set({'X-SERVER-TOKEN': token})
-            .send({ invalidProperty: 'invalidValue' });
+            .send({invalidProperty: 'invalidValue'});
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Bad Request');
+    });
+
+    test('Fail - User Already Locked', async () => {
+        testEnv.expressServer = testEnv.expressServer as ExpressServer;
+
+        // Generate token
+        const tokenContent: AuthToken = {
+            id: 'testAdmin',
+            type: 'access',
+            tokenType: 'serverAdmin',
+            accountType: 'admin',
+        };
+        const token = jwt.sign(tokenContent, testEnv.testConfig.jwt.secretKey, {
+            algorithm: 'HS512',
+            expiresIn: '10m',
+        });
+
+        // Request
+        const response = await request(testEnv.expressServer.app)
+            .post(`/user/profile/${userMap.locked.email}/lock`)
+            .set({'X-SERVER-TOKEN': token})
+            .send({description: "Posted unauthorized advertisement to course evaluation"});
+        expect(response.status).toBe(409);
+        expect(response.body.error).toBe('Conflict');
     });
 
     test('Success - Lock User', async () => {
@@ -254,10 +270,12 @@ describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () =>
     
         // Request to lock the user profile
         const response = await request(testEnv.expressServer.app)
-            .post(`/user/${userMap.steve.email}/lock`)
+            .post(`/user/profile/${userMap.steve.email}/lock`)
             .set({'X-SERVER-TOKEN': token})
-            .send({"description": "Posted unauthorized advertisement to course evaluation"});
+            .set({Origin: 'https://collegemate.app'})
+            .send({description: "Posted unauthorized advertisement to course evaluation"});
         expect(response.status).toBe(200);
         expect(response.body.locked).toBe(true);
+        expect(response.body.lockedDescription).toBe("Posted unauthorized advertisement to course evaluation");
     });
 });

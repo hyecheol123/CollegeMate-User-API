@@ -50,7 +50,7 @@ const userRouter = express.Router();
 // });
 
 // POST: /user/profile/{base64Email}/lock
-userRouter.post('/:base64Email/lock', async (req, res, next) => {
+userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
   const dbClient: Cosmos.Database = req.app.locals.dbClient;
 
   try {
