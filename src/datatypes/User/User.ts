@@ -6,6 +6,7 @@
 import * as Cosmos from '@azure/cosmos';
 import BadRequestError from '../../exceptions/BadRequestError';
 import NotFoundError from '../../exceptions/NotFoundError';
+import ConflictError from '../../exceptions/ConflictError';
 
 const USER = 'user';
 
@@ -105,8 +106,43 @@ export default class User {
   }
 
   /**
+   * Retrieve user information from the database
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} email email of the user
+   */
+  static async read(dbClient: Cosmos.Database, email: string): Promise<User> {
+    // Query that retrieves user information from the database
+    const result = await dbClient
+      .container(USER)
+      .items.query({
+        query: `SELECT * FROM user WHERE user.email = "${email}"`,
+      })
+      .fetchAll();
+    if (result.resources.length === 0) {
+      throw new NotFoundError();
+    }
+    const user = result.resources[0];
+    return new User(
+      user.email,
+      user.nickname,
+      user.lastLogin,
+      user.signUpDate,
+      user.nicknameChanged,
+      user.deleted,
+      user.deletedAt,
+      user.locked,
+      user.lockedDescription,
+      user.lockedAt,
+      user.major,
+      user.graduationYear,
+      user.tncVersion
+    );
+  }
+
+  /**
    * Lock user with description provided
-   * 
+   *
    * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
    * @param {string} email email of the user to lock
    * @param {string} description description of the lock
@@ -120,12 +156,11 @@ export default class User {
     const dbOps = await dbClient
       .container(USER)
       .item(email)
-      .replace({
-        id: email,
-        locked: true,
-        lockedDescription: description,
-        lockedAt: new Date().toISOString(),
-      });
+      .patch([
+        {op: 'replace', path: '/locked', value: true},
+        {op: 'replace', path: '/lockedDescription', value: description},
+        {op: 'replace', path: '/lockedAt', value: new Date().toISOString()},
+      ]);
 
     if (dbOps.statusCode === 404) {
       throw new NotFoundError();
