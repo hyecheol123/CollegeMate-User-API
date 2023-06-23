@@ -46,10 +46,20 @@ const userRouter = express.Router();
 //   // TODO
 // });
 
-// // POST: /user/{base64Email}/lock
-// userRouter.post('/:base64Email/lock', async (req, res, next) => {
-//   // TODO
-// });
+// POST: /user/{base64Email}/lock
+userRouter.post('/:base64Email/lock', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Header check - access token or Origin header or application key
+    const serverToken = req.header('X-SERVER-TOKEN');
+    if (serverToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+  } catch (e) {
+    next(e);
+  }
+});
 
 // GET: /user/check-nickname
 userRouter.get('/check-nickname', async (req, res, next) => {
