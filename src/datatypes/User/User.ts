@@ -87,14 +87,14 @@ export default class User {
    * @param {Date} lastLogin - last login date of the user
    * @param {Date} signUpDate - sign up date of the user
    * @param {Date} nicknameChanged - nickname changed date of the user
-   * @param {boolean} deleted - whether the user is deleted or not
-   * @param {Date | undefined} deletedAt - date when the user is deleted - undefined if the user is not deleted
-   * @param {boolean} locked - whether the user is locked or not
-   * @param {string | undefined} lockedDescription - description of the lock - undefined if the user is not locked
-   * @param {Date | undefined} lockedAt - date when the user is locked - undefined if the user is not locked
    * @param {string} major - major of the user
    * @param {number} graduationYear - graduation year of the user
    * @param {string} tncVersion - terms and conditions version of the user
+   * @param {boolean} deleted - whether the user is deleted or not
+   * @param {boolean} locked - whether the user is locked or not
+   * @param {Date | undefined} deletedAt - date when the user is deleted - undefined if the user is not deleted
+   * @param {string | undefined} lockedDescription - description of the lock - undefined if the user is not locked
+   * @param {Date | undefined} lockedAt - date when the user is locked - undefined if the user is not locked
    */
   constructor(
     email: string,
