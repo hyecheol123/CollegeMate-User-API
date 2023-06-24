@@ -7,11 +7,11 @@
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
 import User from '../datatypes/User/User';
-import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
+import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 
 // Path: /user
 const userRouter = express.Router();
@@ -78,7 +78,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
     }
 
     // DB operation - check nickname availability
-    const available = await User.checkNickname(
+    const available = await User.readCheckNickname(
       dbClient,
       nicknameVerifyRequest.nickname
     );
