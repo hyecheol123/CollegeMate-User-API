@@ -7,15 +7,15 @@
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
 import User from '../datatypes/User/User';
-import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
+import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
+import getTnC from '../datatypes/TermsAndCondition/getTnC';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
+import ConflictError from '../exceptions/ConflictError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
-import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostRequest';
-import getTnC from '../datatypes/TermsAndCondition/getTnC';
-import ConflictError from '../exceptions/ConflictError';
+import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 
 // Path: /user
 const userRouter = express.Router();
@@ -65,7 +65,7 @@ userRouter.post('/', async (req, res, next) => {
     }
 
     // DB operation - check nickname availability
-    const available = await User.checkNickname(
+    const available = await User.readCheckNickname(
       dbClient,
       userPostRequestObj.nickname
     );
@@ -80,14 +80,11 @@ userRouter.post('/', async (req, res, next) => {
       new Date(),
       new Date(),
       new Date(),
-      false,
-      undefined,
-      false,
-      undefined,
-      undefined,
       userPostRequestObj.major,
       userPostRequestObj.graduationYear,
-      userPostRequestObj.tncVersion
+      userPostRequestObj.tncVersion,
+      false,
+      false
     );
     await User.create(dbClient, user);
     res.status(201).send();
@@ -153,7 +150,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
     }
 
     // DB operation - check nickname availability
-    const available = await User.checkNickname(
+    const available = await User.readCheckNickname(
       dbClient,
       nicknameVerifyRequest.nickname
     );
