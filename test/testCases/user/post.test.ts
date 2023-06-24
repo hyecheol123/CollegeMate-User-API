@@ -1,6 +1,7 @@
 /**
  * Jest unit test for POST /user
  *
+ * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 
@@ -12,7 +13,6 @@ import TestEnv from '../../TestEnv';
 import ExpressServer from '../../../src/ExpressServer';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
 import UserPostRequestObj from '../../../src/datatypes/User/UserPostRequestObj';
-import User from '../../../src/datatypes/User/User';
 
 describe('POST /user - Create User', () => {
   let testEnv: TestEnv;
@@ -40,7 +40,6 @@ describe('POST /user - Create User', () => {
       algorithm: 'HS512',
       expiresIn: '10m',
     };
-
     let tokenContent: AuthToken = {
       id: 'user@wisc.edu',
       type: 'access',
@@ -89,7 +88,7 @@ describe('POST /user - Create User', () => {
       nickname: 'jerry',
       major: 'Computer Science',
       graduationYear: 2023,
-      tncVersion: '1.0.0',
+      tncVersion: 'v1.0.2',
     };
     userMap.valid = userReq;
     // Wrong Email User
@@ -98,7 +97,7 @@ describe('POST /user - Create User', () => {
       nickname: 'jeonghyun',
       major: 'Animal Science',
       graduationYear: 2024,
-      tncVersion: '1.0.0',
+      tncVersion: 'v1.0.2',
     };
     userMap.wrongEmail = userReq;
     // Wrong TnC User
@@ -107,7 +106,7 @@ describe('POST /user - Create User', () => {
       nickname: 'daekyun',
       major: 'Electrical Engineering',
       graduationYear: 2023,
-      tncVersion: '1.0.2',
+      tncVersion: 'v1.0.0',
     };
     userMap.wrongTnC = userReq;
   });
@@ -126,6 +125,7 @@ describe('POST /user - Create User', () => {
       .set({'X-APPLICATION-KEY': '<Wrong>'})
       .send(userMap.valid);
     expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
 
     // No Application Key or Origin
     response = await request(testEnv.expressServer.app)
@@ -133,14 +133,16 @@ describe('POST /user - Create User', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .send(userMap.valid);
     expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
 
-    // No Application Key and Wrong Origin
+    // Wrong Origin
     response = await request(testEnv.expressServer.app)
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({Origin: 'https://suspicious.app'})
       .send(userMap.valid);
     expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
   });
 
   test('Fail - No Access Token', async () => {
@@ -152,6 +154,7 @@ describe('POST /user - Create User', () => {
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(userMap.valid);
     expect(response.status).toBe(401);
+    expect(response.body.error).toBe('Unauthenticated');
   });
 
   test('Fail - Expired Access Token', async () => {
@@ -167,11 +170,11 @@ describe('POST /user - Create User', () => {
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(userMap.valid);
     expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
   });
 
   test('Fail - Wrong Token', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
-    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
     // Wrong Token - Refresh Token as Access Token
     const response = await request(testEnv.expressServer.app)
@@ -180,6 +183,7 @@ describe('POST /user - Create User', () => {
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(userMap.valid);
     expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
   });
 
   test('Fail - Additional or No or Wrong Request Body', async () => {
@@ -191,73 +195,73 @@ describe('POST /user - Create User', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'});
     expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
 
     // Extra Request Body
-    const extraReqBody = {
-      email: userMap.valid.email,
-      nickname: userMap.valid.nickname,
-      major: userMap.valid.major,
-      graduationYear: userMap.valid.graduationYear,
-      tncVersion: userMap.valid.tncVersion,
-      extra: 'extra',
-    };
     response = await request(testEnv.expressServer.app)
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
-      .send(extraReqBody);
+      .send({
+        email: userMap.valid.email,
+        nickname: userMap.valid.nickname,
+        major: userMap.valid.major,
+        graduationYear: userMap.valid.graduationYear,
+        tncVersion: userMap.valid.tncVersion,
+        extra: 'extra',
+      });
     expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
 
     // Request Body with some wrong properties
-    const extraReqBody1 = {
-      email: userMap.valid.email,
-      major: userMap.valid.major,
-      graduationYear: userMap.valid.graduationYear,
-      tncVersion: userMap.valid.tncVersion,
-      extra: 'extra',
-    };
     response = await request(testEnv.expressServer.app)
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
-      .send(extraReqBody1);
+      .send({
+        email: userMap.valid.email,
+        major: userMap.valid.major,
+        graduationYear: userMap.valid.graduationYear,
+        tncVersion: userMap.valid.tncVersion,
+        extra: 'extra',
+      });
     expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
 
     // Request Body with all wrong properties
-    const missingReqBody = {
-      extra: 'extra',
-      property: 'property',
-      wrong: 'wrong',
-      type: 'type',
-    };
     response = await request(testEnv.expressServer.app)
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
-      .send(missingReqBody);
+      .send({
+        extra: 'extra',
+        property: 'property',
+        wrong: 'wrong',
+        type: 'type',
+      });
     expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
 
     // Request Body with some properties missing
-    let reqBody = {
-      email: userMap.valid.email,
-      nickname: userMap.valid.nickname,
-      major: userMap.valid.major,
-      graduationYear: '',
-      tncVersion: userMap.valid.tncVersion,
-    };
     response = await request(testEnv.expressServer.app)
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
-      .send(reqBody);
+      .send({
+        email: userMap.valid.email,
+        nickname: userMap.valid.nickname,
+        major: userMap.valid.major,
+        tncVersion: userMap.valid.tncVersion,
+      });
     expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
 
     // RequestBody with invalid graduationYear
-    reqBody = {
+    const reqBody = {
       email: userMap.valid.email,
       nickname: userMap.valid.nickname,
       major: userMap.valid.major,
-      graduationYear: '2500', // Invalid graduationYear too high
+      graduationYear: 2500, // Invalid graduationYear too high
       tncVersion: userMap.valid.tncVersion,
     };
     response = await request(testEnv.expressServer.app)
@@ -266,19 +270,34 @@ describe('POST /user - Create User', () => {
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(reqBody);
     expect(response.status).toBe(400);
-
-    reqBody.graduationYear = '2000'; // Invalid graduationYear too low
+    expect(response.body.error).toBe('Bad Request');
+    reqBody.graduationYear = 2000; // Invalid graduationYear too low
     response = await request(testEnv.expressServer.app)
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(reqBody);
     expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+
+    // Request Body with invalid email
+    response = await request(testEnv.expressServer.app)
+      .post('/user')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
+      .send({
+        email: 'not an email',
+        nickname: userMap.valid.nickname,
+        major: userMap.valid.major,
+        tncVersion: userMap.valid.tncVersion,
+        graduationYear: 2024,
+      });
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
   });
 
   test('Fail - Different Email', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
-    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
     // Different Email from Token and Request Body
     const response = await request(testEnv.expressServer.app)
@@ -287,6 +306,7 @@ describe('POST /user - Create User', () => {
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(userMap.wrongEmail);
     expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
   });
 
   test('Fail - Wrong TnC', async () => {
@@ -300,36 +320,20 @@ describe('POST /user - Create User', () => {
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(userMap.wrongTnC);
     expect(response.status).toBe(409);
+    expect(response.body.error).toBe('Conflict');
   });
 
   test('Fail - Nickname Not Available', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
-    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
-    // Create a new user with the same nickname
-    const user = new User(
-      'steve@wisc.edu',
-      'jerry',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      false,
-      undefined,
-      undefined,
-      'Computer Science',
-      2024,
-      '0.0.1'
-    );
-    await testEnv.dbClient.container('user').items.create(user);
-
+    userMap.valid.nickname = 'steve';
     const response = await request(testEnv.expressServer.app)
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(userMap.valid);
     expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
   });
 
   test('Success - App', async () => {
