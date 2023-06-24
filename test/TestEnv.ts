@@ -100,7 +100,7 @@ export default class TestEnv {
         locked: false,
         major: 'Computer Science',
         graduationYear: 2024,
-        tncVersion: 'v0.0.1',
+        tncVersion: 'v1.0.2',
       },
       {
         email: 'drag@wisc.edu',
@@ -112,7 +112,7 @@ export default class TestEnv {
         locked: false,
         major: 'Computer Science',
         graduationYear: 2024,
-        tncVersion: 'v0.0.1',
+        tncVersion: 'v1.0.2',
       },
       {
         email: 'deleted@wisc.edu',
@@ -125,7 +125,7 @@ export default class TestEnv {
         locked: false,
         major: 'Computer Science',
         graduationYear: 2024,
-        tncVersion: 'v0.0.1',
+        tncVersion: 'v1.0.2',
       },
       {
         email: 'locked@wisc.edu',
@@ -139,7 +139,7 @@ export default class TestEnv {
         lockedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
         major: 'Computer Science',
         graduationYear: 2024,
-        tncVersion: 'v0.0.1',
+        tncVersion: 'v1.0.2',
       }
     );
     for (let index = 0; index < userSamples.length; index++) {

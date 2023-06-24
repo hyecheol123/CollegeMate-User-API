@@ -2,13 +2,14 @@
  * Express Router middlewhare for User APIs
  *
  * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
+ * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
 import User from '../datatypes/User/User';
 import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
-import getTnC from '../datatypes/TermsAndCondition/getTnC';
+import getTnC from '../datatypes/TNC/getTnC';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import ConflictError from '../exceptions/ConflictError';
@@ -74,12 +75,13 @@ userRouter.post('/', async (req, res, next) => {
     }
 
     // DB operation - create user
+    const currDate = new Date();
     const user = new User(
       userPostRequestObj.email,
       userPostRequestObj.nickname,
-      new Date(),
-      new Date(),
-      new Date(),
+      currDate,
+      currDate,
+      currDate,
       userPostRequestObj.major,
       userPostRequestObj.graduationYear,
       userPostRequestObj.tncVersion,

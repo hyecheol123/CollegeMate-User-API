@@ -1,7 +1,7 @@
 /**
  * Define type of Terms and Conditions
  *
- * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com
+ * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
  */
 
 export default interface TnC {

@@ -132,10 +132,18 @@ export default class User {
    * @param {User} user User object to create
    */
   static async create(dbClient: Cosmos.Database, user: User): Promise<void> {
+    // Cannot create new user whose status is deleted or locked
+    // istanbul ignore if
+    if (user.deleted || user.locked) {
+      throw new Error(
+        '[Data Error] Cannot create new user whose status is deleted or locked'
+      );
+    }
+
     // Create a new user entry
-    user.lastLogin = new Date().toISOString();
-    user.signUpDate = new Date().toISOString();
-    user.nicknameChanged = new Date().toISOString();
+    user.lastLogin = (user.lastLogin as Date).toISOString();
+    user.signUpDate = (user.signUpDate as Date).toISOString();
+    user.nicknameChanged = (user.nicknameChanged as Date).toISOString();
     await dbClient.container(USER).items.create(user);
   }
 

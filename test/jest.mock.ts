@@ -1,18 +1,19 @@
 /**
  * File to execute when jest test environmet is started.
- * Mocking getTnC() function to return mock TnC data.
+ * Mocking some modules
  *
- * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
+ * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
  */
 
 // TnC Mock Data
-jest.mock('../src/datatypes/TermsAndCondition/getTnC', () => ({
+jest.mock('../src/datatypes/TNC/getTnC', () => ({
   __esModule: true,
-  default: jest.fn(async () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  default: jest.fn(async (_req: Request) => {
     return {
-      version: '1.0.0',
-      createdAt: '2020-01-01T00:00:01.002Z',
-      content: 'This is mock TnC content',
+      version: 'v1.0.2',
+      createdAt: new Date('2022-03-01T00:50:43.000Z').toISOString(),
+      content: 'test',
     };
   }),
 }));
