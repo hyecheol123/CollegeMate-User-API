@@ -25,7 +25,10 @@
     "transform": {
       "^.+\\.(ts|tsx)$": "ts-jest"
     },
-    "testTimeout": 120000
+    "testTimeout": 120000,
+    "setupFiles": [
+      "./test/jest.mock.ts"
+    ]
   },
   "scripts": {
     "prebuild": "npm run clean",

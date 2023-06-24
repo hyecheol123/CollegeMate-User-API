@@ -2,27 +2,101 @@
  * Express Router middlewhare for User APIs
  *
  * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
+ * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
 import User from '../datatypes/User/User';
-import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
+import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
+import getTnC from '../datatypes/TNC/getTnC';
+import AuthToken from '../datatypes/Token/AuthToken';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
+import ConflictError from '../exceptions/ConflictError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
-import formatUserProfileResponseObj from '../functions/responseFormatter/formatUserProfileResponseObj';
-import AuthToken from '../datatypes/Token/AuthToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
+import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostRequest';
+import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
+import formatUserProfileResponseObj from '../functions/responseFormatter/formatUserProfileResponseObj';
 
 // Path: /user
 const userRouter = express.Router();
 
-// // POST: /user
-// userRouter.post('/', async (req, res, next) => {
-//   // TODO
-// });
+// POST: /user
+userRouter.post('/', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Check Origin header or application key
+    if (
+      req.header('Origin') !== req.app.get('webpageOrigin') &&
+      !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
+    ) {
+      throw new ForbiddenError();
+    }
+
+    // Header check - access token
+    const accessToken = req.header('X-ACCESS-TOKEN');
+    if (accessToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    const tokenContents = verifyAccessToken(
+      accessToken,
+      req.app.get('jwtAccessKey')
+    );
+
+    // Check request body
+    const userPostRequestObj: UserPostRequestObj = req.body;
+    if (!validateUserPostRequest(userPostRequestObj)) {
+      throw new BadRequestError();
+    }
+
+    // Check if access token has the same email as the request body
+    if (tokenContents.id !== userPostRequestObj.email) {
+      throw new ForbiddenError();
+    }
+
+    // Check if the TnC version is the latest
+    const latestTnCVersion = (await getTnC(req)).version;
+
+    if (
+      !latestTnCVersion ||
+      latestTnCVersion !== userPostRequestObj.tncVersion
+    ) {
+      throw new ConflictError();
+    }
+
+    // DB operation - check nickname availability
+    const available = await User.readCheckNickname(
+      dbClient,
+      userPostRequestObj.nickname
+    );
+    if (!available) {
+      throw new BadRequestError();
+    }
+
+    // DB operation - create user
+    const currDate = new Date();
+    const user = new User(
+      userPostRequestObj.email,
+      userPostRequestObj.nickname,
+      currDate,
+      currDate,
+      currDate,
+      userPostRequestObj.major,
+      userPostRequestObj.graduationYear,
+      userPostRequestObj.tncVersion,
+      false,
+      false
+    );
+    await User.create(dbClient, user);
+    res.status(201).send();
+  } catch (e) {
+    next(e);
+  }
+});
 
 // // DELETE: /user/profile/{base64Email}
 // userRouter.delete('/profile/:base64Email', async (req, res, next) => {
@@ -133,7 +207,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
     }
 
     // DB operation - check nickname availability
-    const available = await User.checkNickname(
+    const available = await User.readCheckNickname(
       dbClient,
       nicknameVerifyRequest.nickname
     );
