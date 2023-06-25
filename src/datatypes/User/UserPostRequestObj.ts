@@ -1,6 +1,6 @@
 /**
  * Define type for UserPostRequestObj
- * - email: email of the user
+ * - id: email of the user
  * - nickname: nickname of the user
  * - major: major of the user
  * - graduationYear: graduation year of the user
@@ -13,7 +13,7 @@
  * Interface for UserPostRequestObj
  */
 export default interface UserPostRequestObj {
-  email: string;
+  id: string;
   nickname: string;
   major: string;
   graduationYear: number;

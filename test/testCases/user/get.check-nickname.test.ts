@@ -12,6 +12,7 @@ import * as Cosmos from '@azure/cosmos';
 import TestEnv from '../../TestEnv';
 import ExpressServer from '../../../src/ExpressServer';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
+import User from '../../../src/datatypes/User/User';
 
 describe('GET /user/check-nickname - Verify Nickname', () => {
   let testEnv: TestEnv;
@@ -27,6 +28,69 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
 
     // Start Test Environment
     await testEnv.start();
+
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    // Create a new user
+    // create multiple users to check if the function can iterate through all the users
+    const userSamples: User[] = [];
+    userSamples.push(
+      {
+        id: 'steve@wisc.edu',
+        nickname: 'steve',
+        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
+        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        major: 'Computer Science',
+        graduationYear: 2024,
+        tncVersion: 'v1.0.2',
+        deleted: false,
+        locked: false,
+      },
+      {
+        id: 'drag@wisc.edu',
+        nickname: 'drag',
+        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
+        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        deleted: false,
+        locked: false,
+        major: 'Computer Science',
+        graduationYear: 2024,
+        tncVersion: 'v1.0.2',
+      },
+      {
+        id: 'deleted@wisc.edu',
+        nickname: 'deleted',
+        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
+        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        deleted: true,
+        deletedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
+        locked: false,
+        major: 'Computer Science',
+        graduationYear: 2024,
+        tncVersion: 'v1.0.2',
+      },
+      {
+        id: 'locked@wisc.edu',
+        nickname: 'locked',
+        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
+        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        deleted: false,
+        locked: false,
+        lockedDescription: 'Spam',
+        lockedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
+        major: 'Computer Science',
+        graduationYear: 2024,
+        tncVersion: 'v1.0.2',
+      }
+    );
+    for (let index = 0; index < userSamples.length; index++) {
+      await testEnv.dbClient.container('user').items.create(userSamples[index]);
+    }
 
     // Create Access Token
     // Valid Access Token

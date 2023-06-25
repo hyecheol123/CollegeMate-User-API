@@ -14,7 +14,6 @@ import * as crypto from 'crypto';
 import * as Cosmos from '@azure/cosmos';
 import TestConfig from './TestConfig';
 import ExpressServer from '../src/ExpressServer';
-import User from '../src/datatypes/User/User';
 
 /**
  * Class for Test Environment
@@ -85,65 +84,6 @@ export default class TestEnv {
     /* istanbul ignore next */
     if (containerOps.statusCode !== 201) {
       throw new Error(JSON.stringify(containerOps));
-    }
-    // Create a new user
-    // create multiple users to check if the function can iterate through all the users
-    const userSamples: User[] = [];
-    userSamples.push(
-      {
-        email: 'steve@wisc.edu',
-        nickname: 'steve',
-        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
-        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
-        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
-        deleted: false,
-        locked: false,
-        major: 'Computer Science',
-        graduationYear: 2024,
-        tncVersion: 'v1.0.2',
-      },
-      {
-        email: 'drag@wisc.edu',
-        nickname: 'drag',
-        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
-        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
-        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
-        deleted: false,
-        locked: false,
-        major: 'Computer Science',
-        graduationYear: 2024,
-        tncVersion: 'v1.0.2',
-      },
-      {
-        email: 'deleted@wisc.edu',
-        nickname: 'deleted',
-        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
-        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
-        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
-        deleted: true,
-        deletedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
-        locked: false,
-        major: 'Computer Science',
-        graduationYear: 2024,
-        tncVersion: 'v1.0.2',
-      },
-      {
-        email: 'locked@wisc.edu',
-        nickname: 'locked',
-        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
-        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
-        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
-        deleted: false,
-        locked: false,
-        lockedDescription: 'Spam',
-        lockedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
-        major: 'Computer Science',
-        graduationYear: 2024,
-        tncVersion: 'v1.0.2',
-      }
-    );
-    for (let index = 0; index < userSamples.length; index++) {
-      await this.dbClient.container('user').items.create(userSamples[index]);
     }
 
     // Setup Express Server

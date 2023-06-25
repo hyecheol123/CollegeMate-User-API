@@ -11,13 +11,13 @@ import addFormats from 'ajv-formats';
 export const validateUserPostRequest = addFormats(new Ajv()).compile({
   type: 'object',
   properties: {
-    email: {type: 'string', format: 'email'},
+    id: {type: 'string', format: 'email'},
     nickname: {type: 'string'},
     major: {type: 'string'},
     // set allowed values for graduationYear to be between 2015 and 2028
     graduationYear: {type: 'number', minimum: 2015, maximum: 2028},
     tncVersion: {type: 'string'},
   },
-  required: ['email', 'nickname', 'major', 'graduationYear', 'tncVersion'],
+  required: ['id', 'nickname', 'major', 'graduationYear', 'tncVersion'],
   additionalProperties: false,
 });

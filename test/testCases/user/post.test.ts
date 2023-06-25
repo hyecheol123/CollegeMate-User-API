@@ -13,6 +13,7 @@ import TestEnv from '../../TestEnv';
 import ExpressServer from '../../../src/ExpressServer';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
 import UserPostRequestObj from '../../../src/datatypes/User/UserPostRequestObj';
+import User from '../../../src/datatypes/User/User';
 
 describe('POST /user - Create User', () => {
   let testEnv: TestEnv;
@@ -23,7 +24,7 @@ describe('POST /user - Create User', () => {
   };
   const userMap = {
     valid: {} as UserPostRequestObj,
-    wrongEmail: {} as UserPostRequestObj,
+    wrongId: {} as UserPostRequestObj,
     wrongTnC: {} as UserPostRequestObj,
   };
 
@@ -33,6 +34,69 @@ describe('POST /user - Create User', () => {
 
     // Start Test Environment
     await testEnv.start();
+
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
+
+    // Create a new user
+    // create multiple users to check if the function can iterate through all the users
+    const userSamples: User[] = [];
+    userSamples.push(
+      {
+        id: 'steve@wisc.edu',
+        nickname: 'steve',
+        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
+        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        major: 'Computer Science',
+        graduationYear: 2024,
+        tncVersion: 'v1.0.2',
+        deleted: false,
+        locked: false,
+      },
+      {
+        id: 'drag@wisc.edu',
+        nickname: 'drag',
+        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
+        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        deleted: false,
+        locked: false,
+        major: 'Computer Science',
+        graduationYear: 2024,
+        tncVersion: 'v1.0.2',
+      },
+      {
+        id: 'deleted@wisc.edu',
+        nickname: 'deleted',
+        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
+        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        deleted: true,
+        deletedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
+        locked: false,
+        major: 'Computer Science',
+        graduationYear: 2024,
+        tncVersion: 'v1.0.2',
+      },
+      {
+        id: 'locked@wisc.edu',
+        nickname: 'locked',
+        lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
+        signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
+        deleted: false,
+        locked: false,
+        lockedDescription: 'Spam',
+        lockedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
+        major: 'Computer Science',
+        graduationYear: 2024,
+        tncVersion: 'v1.0.2',
+      }
+    );
+    for (let index = 0; index < userSamples.length; index++) {
+      await testEnv.dbClient.container('user').items.create(userSamples[index]);
+    }
 
     // Create Access Token
     // Valid Access Token
@@ -84,30 +148,33 @@ describe('POST /user - Create User', () => {
     // Create User
     // Valid User
     let userReq: UserPostRequestObj = {
-      email: 'user@wisc.edu',
+      id: 'user@wisc.edu',
       nickname: 'jerry',
       major: 'Computer Science',
       graduationYear: 2023,
       tncVersion: 'v1.0.2',
     };
+    userReq.id = Buffer.from(userReq.id, 'utf8').toString('base64');
     userMap.valid = userReq;
     // Wrong Email User
     userReq = {
-      email: 'wrong@wisc.edu',
+      id: 'wrong@wisc.edu',
       nickname: 'jeonghyun',
       major: 'Animal Science',
       graduationYear: 2024,
       tncVersion: 'v1.0.2',
     };
-    userMap.wrongEmail = userReq;
+    userReq.id = Buffer.from(userReq.id, 'utf8').toString('base64');
+    userMap.wrongId = userReq;
     // Wrong TnC User
     userReq = {
-      email: 'user@wisc.edu',
+      id: 'user@wisc.edu',
       nickname: 'daekyun',
       major: 'Electrical Engineering',
       graduationYear: 2023,
       tncVersion: 'v1.0.0',
     };
+    userReq.id = Buffer.from(userReq.id, 'utf8').toString('base64');
     userMap.wrongTnC = userReq;
   });
 
@@ -203,7 +270,7 @@ describe('POST /user - Create User', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send({
-        email: userMap.valid.email,
+        id: userMap.valid.id,
         nickname: userMap.valid.nickname,
         major: userMap.valid.major,
         graduationYear: userMap.valid.graduationYear,
@@ -219,7 +286,7 @@ describe('POST /user - Create User', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send({
-        email: userMap.valid.email,
+        id: userMap.valid.id,
         major: userMap.valid.major,
         graduationYear: userMap.valid.graduationYear,
         tncVersion: userMap.valid.tncVersion,
@@ -248,7 +315,7 @@ describe('POST /user - Create User', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send({
-        email: userMap.valid.email,
+        id: userMap.valid.id,
         nickname: userMap.valid.nickname,
         major: userMap.valid.major,
         tncVersion: userMap.valid.tncVersion,
@@ -258,7 +325,7 @@ describe('POST /user - Create User', () => {
 
     // RequestBody with invalid graduationYear
     const reqBody = {
-      email: userMap.valid.email,
+      id: userMap.valid.id,
       nickname: userMap.valid.nickname,
       major: userMap.valid.major,
       graduationYear: 2500, // Invalid graduationYear too high
@@ -304,7 +371,7 @@ describe('POST /user - Create User', () => {
       .post('/user')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
-      .send(userMap.wrongEmail);
+      .send(userMap.wrongId);
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
   });
@@ -348,15 +415,16 @@ describe('POST /user - Create User', () => {
       .send(userMap.valid);
     expect(response.status).toBe(201);
 
+    const email = Buffer.from(userMap.valid.id, 'base64').toString('utf8');
     // Check if user is created in database
     const dbQuery = await testEnv.dbClient
       .container('user')
       .items.query({
-        query: `SELECT * FROM user WHERE user.email = '${userMap.valid.email}'`,
+        query: `SELECT * FROM user WHERE user.id = '${email}'`,
       })
       .fetchAll();
     expect(dbQuery.resources.length).toBe(1);
-    expect(dbQuery.resources[0].email).toBe(userMap.valid.email);
+    expect(dbQuery.resources[0].id).toBe(email);
     expect(dbQuery.resources[0].nickname).toBe(userMap.valid.nickname);
     expect(dbQuery.resources[0].major).toBe(userMap.valid.major);
     expect(dbQuery.resources[0].graduationYear).toBe(
@@ -377,15 +445,16 @@ describe('POST /user - Create User', () => {
       .send(userMap.valid);
     expect(response.status).toBe(201);
 
+    const email = Buffer.from(userMap.valid.id, 'base64').toString('utf8');
     // Check if user is created in database
     const dbQuery = await testEnv.dbClient
       .container('user')
       .items.query({
-        query: `SELECT * FROM user WHERE user.email = '${userMap.valid.email}'`,
+        query: `SELECT * FROM user WHERE user.id = '${email}'`,
       })
       .fetchAll();
     expect(dbQuery.resources.length).toBe(1);
-    expect(dbQuery.resources[0].email).toBe(userMap.valid.email);
+    expect(dbQuery.resources[0].id).toBe(email);
     expect(dbQuery.resources[0].nickname).toBe(userMap.valid.nickname);
     expect(dbQuery.resources[0].major).toBe(userMap.valid.major);
     expect(dbQuery.resources[0].graduationYear).toBe(

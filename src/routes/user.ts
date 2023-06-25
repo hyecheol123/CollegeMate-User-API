@@ -17,9 +17,10 @@ import ConflictError from '../exceptions/ConflictError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
+import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
-import formatUserProfileResponseObj from '../functions/responseFormatter/formatUserProfileResponseObj';
+import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
 
 // Path: /user
 const userRouter = express.Router();
@@ -49,12 +50,21 @@ userRouter.post('/', async (req, res, next) => {
 
     // Check request body
     const userPostRequestObj: UserPostRequestObj = req.body;
+    if (userPostRequestObj.id !== undefined) {
+      userPostRequestObj.id = Buffer.from(
+        userPostRequestObj.id,
+        'base64'
+      ).toString('utf8');
+    }
+    if (!validateEmail(userPostRequestObj.id)) {
+      throw new BadRequestError();
+    }
     if (!validateUserPostRequest(userPostRequestObj)) {
       throw new BadRequestError();
     }
 
     // Check if access token has the same email as the request body
-    if (tokenContents.id !== userPostRequestObj.email) {
+    if (tokenContents.id !== userPostRequestObj.id) {
       throw new ForbiddenError();
     }
 
@@ -80,7 +90,7 @@ userRouter.post('/', async (req, res, next) => {
     // DB operation - create user
     const currDate = new Date();
     const user = new User(
-      userPostRequestObj.email,
+      userPostRequestObj.id,
       userPostRequestObj.nickname,
       currDate,
       currDate,
@@ -138,9 +148,17 @@ userRouter.get('/profile/:base64Email', async (req, res, next) => {
       );
     }
 
-    // DB operation - Get user information
+    // Check request body
     let calledUserStatus: string;
-    const requestUserEmail = req.params.base64Email;
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64'
+    ).toString('utf8');
+    if (!validateEmail(requestUserEmail)) {
+      throw new BadRequestError();
+    }
+
+    // DB operation - Get user information
     if (tokenContents !== undefined) {
       if (tokenContents.id === requestUserEmail) {
         calledUserStatus = 'self';
@@ -154,29 +172,50 @@ userRouter.get('/profile/:base64Email', async (req, res, next) => {
     // DB operation - Get user information
     const requestUser = await User.read(dbClient, requestUserEmail);
 
-    // Response
-    const responseUser = formatUserProfileResponseObj(
-      requestUser,
-      calledUserStatus
-    );
-    res.status(200).json(responseUser);
+    const userProfileResponseObj: UserProfileResponseObj = {
+      nickname: requestUser.nickname,
+      major: requestUser.major,
+      graduationYear: requestUser.graduationYear,
+    };
+
+    if (calledUserStatus === 'serverAdmin') {
+      userProfileResponseObj.lastLogin = requestUser.lastLogin;
+      userProfileResponseObj.signUpDate = requestUser.signUpDate;
+      userProfileResponseObj.nicknameChanged = requestUser.nicknameChanged;
+      userProfileResponseObj.deleted = requestUser.deleted;
+      if (requestUser.deletedAt) {
+        userProfileResponseObj.deletedAt = requestUser.deletedAt;
+      }
+      userProfileResponseObj.locked = requestUser.locked;
+      if (requestUser.locked) {
+        userProfileResponseObj.lockedDescription =
+          requestUser.lockedDescription;
+        userProfileResponseObj.lockedAt = requestUser.lockedAt;
+      }
+      userProfileResponseObj.tncVersion = requestUser.tncVersion;
+    } else if (calledUserStatus === 'self') {
+      userProfileResponseObj.lastLogin = requestUser.lastLogin;
+      userProfileResponseObj.nicknameChanged = requestUser.nicknameChanged;
+    }
+
+    res.status(200).json(userProfileResponseObj);
   } catch (e) {
     next(e);
   }
 });
 
 // // POST: /user/profile/{base64Email}/accepttnc
-// userRouter.post('/:base64Email/accepttnc', async (req, res, next) => {
+// userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
 //   // TODO
 // });
 
 // // POST: /user/profile/{base64Email}/lastlogin
-// userRouter.post('/:base64Email/lastlogin', async (req, res, next) => {
+// userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
 //   // TODO
 // });
 
 // // POST: /user/profile/{base64Email}/lock
-// userRouter.post('/:base64Email/lock', async (req, res, next) => {
+// userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
 //   // TODO
 // });
 

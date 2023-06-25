@@ -1,5 +1,5 @@
 /**
- * Jest unit test for GET /user/{base64Email} method
+ * Jest unit test for GET /user/{base64id} method
  *
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
@@ -13,7 +13,7 @@ import ExpressServer from '../../../src/ExpressServer';
 import User from '../../../src/datatypes/User/User';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
 
-describe('GET /user/profile/{base64Email} - Get User Profile', () => {
+describe('GET /user/profile/{base64id} - Get User Profile', () => {
   let testEnv: TestEnv;
   const accessTokenMap = {
     valid: '',
@@ -43,53 +43,50 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
     let user = new User(
       'steve@wisc.edu',
       'steve',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      false,
-      undefined,
-      undefined,
+      new Date(),
+      new Date(),
+      new Date(),
       'Computer Science',
       2024,
-      '1.0.0'
+      '1.0.0',
+      false,
+      false
     );
     await testEnv.dbClient.container('user').items.create(user);
+    user.id = Buffer.from(user.id, 'utf8').toString('base64');
     userMap.steve = user;
     user = new User(
       'drag@wisc.edu',
       'drag',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      false,
-      undefined,
-      undefined,
+      new Date(),
+      new Date(),
+      new Date(),
       'Computer Science',
       2024,
-      '1.0.0'
+      '1.0.0',
+      false,
+      false
     );
     await testEnv.dbClient.container('user').items.create(user);
+    user.id = Buffer.from(user.id, 'utf8').toString('base64');
     userMap.drag = user;
     user = new User(
       'lockedAndDeleted@wisc.edu',
       'lockedAndDeleted',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      true,
-      new Date().toISOString(),
-      true,
-      new Date().toISOString(),
-      new Date().toISOString(),
+      new Date(),
+      new Date(),
+      new Date(),
       'Computer Science',
       2024,
-      '1.0.0'
+      '1.0.0',
+      true,
+      true,
+      new Date(),
+      'locked for reasons',
+      new Date()
     );
     await testEnv.dbClient.container('user').items.create(user);
+    user.id = Buffer.from(user.id, 'utf8').toString('base64');
     userMap.lockedAndDeleted = user;
 
     // Create Access Token
@@ -146,7 +143,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
     // Self Token
     // Token Content
     tokenContent = {
-      id: userMap.steve.email,
+      id: 'steve@wisc.edu',
       type: 'access',
       tokenType: 'user',
     };
@@ -162,7 +159,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     // locked self Token
     tokenContent = {
-      id: userMap.lockedAndDeleted.email,
+      id: 'lockedAndDeleted@wisc.edu',
       type: 'access',
       tokenType: 'user',
     };
@@ -186,14 +183,14 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request without any origin or app
     let response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.self});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
     //request without from wrong origin and not app
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.self})
       .set({Origin: 'https://wrong.origin.com'});
     expect(response.status).toBe(403);
@@ -201,7 +198,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     // request without from wrong app
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.self})
       .set({'X-APPLICATION-KEY': 'wrongAppKey'});
     expect(response.status).toBe(403);
@@ -213,7 +210,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request without any access or admin token
     const response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(401);
     expect(response.body.error).toBe('Unauthenticated');
@@ -228,7 +225,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request with an expired access token
     let response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.expired})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(403);
@@ -253,7 +250,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request with an expired admin token
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': adminToken})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(403);
@@ -264,7 +261,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
     //request with a wrong access token - refresh token
     let response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.wrong})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(403);
@@ -272,7 +269,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request with a wrong access token
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': 'wrong'})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(403);
@@ -309,7 +306,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request with a wrong admin token - refresh token
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-SERVER-TOKEN': wrongToken})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(403);
@@ -317,7 +314,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request with a wrong admin token - wrong type
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-SERVER-TOKEN': wrongType})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(403);
@@ -325,19 +322,35 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request with a wrong admin token
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-SERVER-TOKEN': 'wrong'})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
   });
 
-  test('Fail - Email not found', async () => {
+  test('Fail - Wrong Email Format', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
-    //request with an invalid email
+    const invalidEmail = Buffer.from('wrong', 'utf8').toString('base64');
+    //request with an invalid parameter
     const response = await request(testEnv.expressServer.app)
-      .get('/user/profile/doesNotExist@wisc.edu')
+      .get(`/user/profile/${invalidEmail}`)
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({Origin: 'https://collegemate.app'});
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+  });
+
+  test('Fail - id not found', async () => {
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+
+    const invalidEmail = Buffer.from('doesnotExist@wisc.edu', 'utf8').toString(
+      'base64'
+    );
+    //request with an invalid id
+    const response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${invalidEmail}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(404);
@@ -361,36 +374,40 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request with an admin token
     let response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-SERVER-TOKEN': token});
     expect(response.status).toBe(200);
     expect(response.body.nickname).toBe('steve');
     expect(response.body.major).toBe(userMap.steve.major);
     expect(response.body.graduationYear).toBe(userMap.steve.graduationYear);
-    expect(response.body.lastLogin).toBe(userMap.steve.lastLogin);
-    expect(response.body.nicknameChanged).toBe(userMap.steve.nicknameChanged);
+    expect(new Date(response.body.lastLogin)).toEqual(userMap.steve.lastLogin);
+    expect(new Date(response.body.nicknameChanged)).toEqual(
+      userMap.steve.nicknameChanged
+    );
     expect(response.body.deleted).toBe(userMap.steve.deleted);
     expect(response.body.locked).toBe(userMap.steve.locked);
-    expect(response.body).not.toHaveProperty('email');
+    expect(response.body).not.toHaveProperty('id');
 
     //request with an admin token - different user
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.drag.email}`)
+      .get(`/user/profile/${userMap.drag.id}`)
       .set({'X-SERVER-TOKEN': token});
     expect(response.status).toBe(200);
     expect(response.body.nickname).toBe('drag');
     expect(response.body.major).toBe(userMap.drag.major);
     expect(response.body.graduationYear).toBe(userMap.drag.graduationYear);
-    expect(response.body.lastLogin).toBe(userMap.drag.lastLogin);
-    expect(response.body.nicknameChanged).toBe(userMap.drag.nicknameChanged);
+    expect(new Date(response.body.lastLogin)).toEqual(userMap.drag.lastLogin);
+    expect(new Date(response.body.nicknameChanged)).toEqual(
+      userMap.drag.nicknameChanged
+    );
     expect(response.body.deleted).toBe(userMap.drag.deleted);
     expect(response.body.locked).toBe(userMap.drag.locked);
-    expect(response.body).not.toHaveProperty('email');
+    expect(response.body).not.toHaveProperty('id');
     expect(response.body).not.toHaveProperty('deletedAt');
 
     //request with an admin token - locked and deleted user
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.lockedAndDeleted.email}`)
+      .get(`/user/profile/${userMap.lockedAndDeleted.id}`)
       .set({'X-SERVER-TOKEN': token});
     expect(response.status).toBe(200);
     expect(response.body.nickname).toBe('lockedAndDeleted');
@@ -398,14 +415,18 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
     expect(response.body.graduationYear).toBe(
       userMap.lockedAndDeleted.graduationYear
     );
-    expect(response.body.lastLogin).toBe(userMap.lockedAndDeleted.lastLogin);
-    expect(response.body.nicknameChanged).toBe(
+    expect(new Date(response.body.lastLogin)).toEqual(
+      userMap.lockedAndDeleted.lastLogin
+    );
+    expect(new Date(response.body.nicknameChanged)).toEqual(
       userMap.lockedAndDeleted.nicknameChanged
     );
     expect(response.body.deleted).toBe(userMap.lockedAndDeleted.deleted);
-    expect(response.body.deletedAt).toBe(userMap.lockedAndDeleted.deletedAt);
+    expect(new Date(response.body.deletedAt)).toEqual(
+      userMap.lockedAndDeleted.deletedAt
+    );
     expect(response.body.locked).toBe(userMap.lockedAndDeleted.locked);
-    expect(response.body).not.toHaveProperty('email');
+    expect(response.body).not.toHaveProperty('id');
   });
 
   test('Success - Owner Request', async () => {
@@ -413,7 +434,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     //request self
     let response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.self})
       .set({Origin: 'https://collegemate.app'});
 
@@ -421,14 +442,16 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
     expect(response.body.nickname).toBe('steve');
     expect(response.body.major).toBe(userMap.steve.major);
     expect(response.body.graduationYear).toBe(userMap.steve.graduationYear);
-    expect(response.body.lastLogin).toBe(userMap.steve.lastLogin);
-    expect(response.body.nicknameChanged).toBe(userMap.steve.nicknameChanged);
+    expect(new Date(response.body.lastLogin)).toEqual(userMap.steve.lastLogin);
+    expect(new Date(response.body.nicknameChanged)).toEqual(
+      userMap.steve.nicknameChanged
+    );
     expect(response.body).not.toHaveProperty('deleted');
     expect(response.body).not.toHaveProperty('deletedAt');
 
     //request self
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.lockedAndDeleted.email}`)
+      .get(`/user/profile/${userMap.lockedAndDeleted.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.lockedSelf})
       .set({Origin: 'https://collegemate.app'});
 
@@ -438,8 +461,10 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
     expect(response.body.graduationYear).toBe(
       userMap.lockedAndDeleted.graduationYear
     );
-    expect(response.body.lastLogin).toBe(userMap.lockedAndDeleted.lastLogin);
-    expect(response.body.nicknameChanged).toBe(
+    expect(new Date(response.body.lastLogin)).toEqual(
+      userMap.lockedAndDeleted.lastLogin
+    );
+    expect(new Date(response.body.nicknameChanged)).toEqual(
       userMap.lockedAndDeleted.nicknameChanged
     );
     expect(response.body).not.toHaveProperty('deleted');
@@ -451,7 +476,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     // Request From Web
     let response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(200);
@@ -463,7 +488,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     // Request From Web - different user
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.drag.email}`)
+      .get(`/user/profile/${userMap.drag.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'});
     expect(response.status).toBe(200);
@@ -475,7 +500,7 @@ describe('GET /user/profile/{base64Email} - Get User Profile', () => {
 
     // Request From App
     response = await request(testEnv.expressServer.app)
-      .get(`/user/profile/${userMap.steve.email}`)
+      .get(`/user/profile/${userMap.steve.id}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'});
     expect(response.status).toBe(200);
