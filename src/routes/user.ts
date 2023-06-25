@@ -13,7 +13,7 @@ import BadRequestError from '../exceptions/BadRequestError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
-import { validateLockUserRequest } from '../functions/inputValidator/validateLockUserRequest';
+import {validateLockUserRequest} from '../functions/inputValidator/validateLockUserRequest';
 import ConflictError from '../exceptions/ConflictError';
 
 // Path: /user
