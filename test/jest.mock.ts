@@ -7,9 +7,9 @@
 
 // Mocking Email Sending Module
 jest.mock('../src/functions/utils/sendLockEmail', () => ({
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => Promise.resolve()),
-  }));
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => Promise.resolve()),
+}));
 
 // Mocking Notification Sending Module
 jest.mock('../src/functions/utils/sendLockNotification', () => ({
