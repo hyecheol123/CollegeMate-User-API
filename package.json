@@ -44,7 +44,7 @@
     "start": "node dist/main.js"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=16"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.3",
