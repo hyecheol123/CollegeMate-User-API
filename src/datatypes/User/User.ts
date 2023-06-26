@@ -15,14 +15,14 @@ export default class User {
   lastLogin: Date | string;
   signUpDate: Date | string;
   nicknameChanged: Date | string;
-  deleted: boolean;
-  deletedAt?: Date | string;
-  locked: boolean;
-  lockedDescription?: string;
-  lockedAt?: Date | string;
   major: string;
   graduationYear: number;
   tncVersion: string;
+  deleted: boolean;
+  locked: boolean;
+  deletedAt?: Date | string;
+  lockedDescription?: string;
+  lockedAt?: Date | string;
 
   constructor(
     id: string,
@@ -179,15 +179,74 @@ export default class User {
    * Retrieve user information from the database
    *
    * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
-   * @param {string} id email of the user
+   * @param {string} email email of the user
    */
-  static async read(dbClient: Cosmos.Database, id: string): Promise<User> {
+  static async read(dbClient: Cosmos.Database, email: string): Promise<User> {
     // Query that retrieves user information from the database
-    const result = await dbClient.container(USER).item(id).read<User>();
+    const result = await dbClient.container(USER).item(email).read<User>();
     if (result.statusCode === 404 || result.resource === undefined) {
       throw new NotFoundError();
     }
-    const user = result.resource;
-    return user;
+
+    if (!result.resource.deleted && !result.resource.locked) {
+      return new User(
+        result.resource.id,
+        result.resource.nickname,
+        new Date(result.resource.lastLogin),
+        new Date(result.resource.signUpDate),
+        new Date(result.resource.nicknameChanged),
+        result.resource.major,
+        result.resource.graduationYear,
+        result.resource.tncVersion,
+        false,
+        false
+      );
+    } else if (!result.resource.deleted && result.resource.locked) {
+      return new User(
+        result.resource.id,
+        result.resource.nickname,
+        new Date(result.resource.lastLogin),
+        new Date(result.resource.signUpDate),
+        new Date(result.resource.nicknameChanged),
+        result.resource.major,
+        result.resource.graduationYear,
+        result.resource.tncVersion,
+        false,
+        true,
+        undefined,
+        result.resource.lockedDescription as string,
+        new Date(result.resource.lockedAt as string)
+      );
+    } else if (result.resource.deleted && !result.resource.locked) {
+      return new User(
+        result.resource.id,
+        result.resource.nickname,
+        new Date(result.resource.lastLogin),
+        new Date(result.resource.signUpDate),
+        new Date(result.resource.nicknameChanged),
+        result.resource.major,
+        result.resource.graduationYear,
+        result.resource.tncVersion,
+        true,
+        false,
+        new Date(result.resource.deletedAt as string)
+      );
+    } else {
+      return new User(
+        result.resource.id,
+        result.resource.nickname,
+        new Date(result.resource.lastLogin),
+        new Date(result.resource.signUpDate),
+        new Date(result.resource.nicknameChanged),
+        result.resource.major,
+        result.resource.graduationYear,
+        result.resource.tncVersion,
+        true,
+        true,
+        new Date(result.resource.deletedAt as string),
+        result.resource.lockedDescription as string,
+        new Date(result.resource.lockedAt as string)
+      );
+    }
   }
 }

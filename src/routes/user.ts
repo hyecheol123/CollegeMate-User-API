@@ -7,6 +7,7 @@
 
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
+import {Buffer} from 'node:buffer';
 import User from '../datatypes/User/User';
 import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
 import getTnC from '../datatypes/TNC/getTnC';
@@ -21,6 +22,7 @@ import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import NotFoundError from '../exceptions/NotFoundError';
 
 // Path: /user
 const userRouter = express.Router();
@@ -135,69 +137,71 @@ userRouter.get('/profile/:base64Email', async (req, res, next) => {
 
     // Check server admin token or access token - which is provided
     let tokenContents: AuthToken | undefined = undefined;
+    const accessToken = req.header('X-ACCESS-TOKEN');
     if (serverToken !== undefined) {
       verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
-    } else {
-      const accessToken = req.header('X-ACCESS-TOKEN');
-      if (accessToken === undefined) {
-        throw new UnauthenticatedError();
-      }
+    } else if (accessToken !== undefined) {
       tokenContents = verifyAccessToken(
         accessToken,
         req.app.get('jwtAccessKey')
       );
+    } else {
+      throw new UnauthenticatedError();
     }
 
     // Check request body
-    let calledUserStatus: string;
+    let calledUserStatus: 'self' | 'other' | 'serverAdmin';
     const requestUserEmail = Buffer.from(
       req.params.base64Email,
-      'base64'
+      'base64url'
     ).toString('utf8');
     if (!validateEmail(requestUserEmail)) {
-      throw new BadRequestError();
+      throw new NotFoundError();
     }
-
-    // DB operation - Get user information
     if (tokenContents !== undefined) {
-      if (tokenContents.id === requestUserEmail) {
-        calledUserStatus = 'self';
-      } else {
-        calledUserStatus = 'other';
-      }
+      calledUserStatus =
+        tokenContents.id === requestUserEmail
+          ? (calledUserStatus = 'self')
+          : (calledUserStatus = 'other');
     } else {
       calledUserStatus = 'serverAdmin';
     }
 
     // DB operation - Get user information
     const requestUser = await User.read(dbClient, requestUserEmail);
-
     const userProfileResponseObj: UserProfileResponseObj = {
       nickname: requestUser.nickname,
       major: requestUser.major,
       graduationYear: requestUser.graduationYear,
     };
-
+    if (calledUserStatus !== 'other') {
+      userProfileResponseObj.lastLogin = (
+        requestUser.lastLogin as Date
+      ).toISOString();
+      userProfileResponseObj.nicknameChanged = (
+        requestUser.nicknameChanged as Date
+      ).toISOString();
+    }
     if (calledUserStatus === 'serverAdmin') {
-      userProfileResponseObj.lastLogin = requestUser.lastLogin;
-      userProfileResponseObj.signUpDate = requestUser.signUpDate;
-      userProfileResponseObj.nicknameChanged = requestUser.nicknameChanged;
+      userProfileResponseObj.signUpDate = (
+        requestUser.signUpDate as Date
+      ).toISOString();
       userProfileResponseObj.deleted = requestUser.deleted;
-      if (requestUser.deletedAt) {
-        userProfileResponseObj.deletedAt = requestUser.deletedAt;
+      if (requestUser.deleted) {
+        userProfileResponseObj.deletedAt = (
+          requestUser.deletedAt as Date
+        ).toISOString();
       }
       userProfileResponseObj.locked = requestUser.locked;
       if (requestUser.locked) {
         userProfileResponseObj.lockedDescription =
           requestUser.lockedDescription;
-        userProfileResponseObj.lockedAt = requestUser.lockedAt;
+        userProfileResponseObj.lockedAt = (
+          requestUser.lockedAt as Date
+        ).toISOString();
       }
       userProfileResponseObj.tncVersion = requestUser.tncVersion;
-    } else if (calledUserStatus === 'self') {
-      userProfileResponseObj.lastLogin = requestUser.lastLogin;
-      userProfileResponseObj.nicknameChanged = requestUser.nicknameChanged;
     }
-
     res.status(200).json(userProfileResponseObj);
   } catch (e) {
     next(e);

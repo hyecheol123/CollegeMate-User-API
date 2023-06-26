@@ -6,14 +6,14 @@
 
 export default interface UserProfileResponseObj {
   nickname: string;
-  lastLogin?: Date | string;
-  signUpDate?: Date | string;
-  nicknameChanged?: Date | string;
+  lastLogin?: string;
+  signUpDate?: string;
+  nicknameChanged?: string;
   deleted?: boolean;
-  deletedAt?: Date | string;
+  deletedAt?: string;
   locked?: boolean;
   lockedDescription?: string;
-  lockedAt?: Date | string;
+  lockedAt?: string;
   major: string;
   graduationYear: number;
   tncVersion?: string;
