@@ -9,7 +9,6 @@
 import * as request from 'supertest';
 import * as jwt from 'jsonwebtoken';
 import * as Cosmos from '@azure/cosmos';
-import {Buffer} from 'node:buffer';
 import TestEnv from '../../TestEnv';
 import ExpressServer from '../../../src/ExpressServer';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
@@ -91,7 +90,6 @@ describe('POST /user - Create User', () => {
       graduationYear: 2023,
       tncVersion: 'v1.0.2',
     };
-    userReq.email = Buffer.from(userReq.email, 'utf8').toString('base64url');
     userMap.valid = userReq;
     // Wrong Email User
     userReq = {
@@ -101,7 +99,6 @@ describe('POST /user - Create User', () => {
       graduationYear: 2024,
       tncVersion: 'v1.0.2',
     };
-    userReq.email = Buffer.from(userReq.email, 'utf8').toString('base64url');
     userMap.wrongEmail = userReq;
     // Wrong TnC User
     userReq = {
@@ -111,7 +108,6 @@ describe('POST /user - Create User', () => {
       graduationYear: 2023,
       tncVersion: 'v1.0.0',
     };
-    userReq.email = Buffer.from(userReq.email, 'utf8').toString('base64url');
     userMap.wrongTnC = userReq;
   });
 
@@ -351,25 +347,16 @@ describe('POST /user - Create User', () => {
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(userMap.valid);
     expect(response.status).toBe(201);
-
-    const email = Buffer.from(userMap.valid.email, 'base64url').toString(
-      'utf8'
-    );
     // Check if user is created in database
     const dbQuery = await testEnv.dbClient
       .container('user')
-      .items.query({
-        query: `SELECT * FROM user WHERE user.id = '${email}'`,
-      })
-      .fetchAll();
-    expect(dbQuery.resources.length).toBe(1);
-    expect(dbQuery.resources[0].id).toBe(email);
-    expect(dbQuery.resources[0].nickname).toBe(userMap.valid.nickname);
-    expect(dbQuery.resources[0].major).toBe(userMap.valid.major);
-    expect(dbQuery.resources[0].graduationYear).toBe(
-      userMap.valid.graduationYear
-    );
-    expect(dbQuery.resources[0].tncVersion).toBe(userMap.valid.tncVersion);
+      .item(userMap.valid.email)
+      .read();
+    expect(dbQuery.resource.id).toBe(userMap.valid.email);
+    expect(dbQuery.resource.nickname).toBe(userMap.valid.nickname);
+    expect(dbQuery.resource.major).toBe(userMap.valid.major);
+    expect(dbQuery.resource.graduationYear).toBe(userMap.valid.graduationYear);
+    expect(dbQuery.resource.tncVersion).toBe(userMap.valid.tncVersion);
   });
 
   test('Success - Web', async () => {
@@ -384,23 +371,15 @@ describe('POST /user - Create User', () => {
       .send(userMap.valid);
     expect(response.status).toBe(201);
 
-    const email = Buffer.from(userMap.valid.email, 'base64url').toString(
-      'utf8'
-    );
     // Check if user is created in database
     const dbQuery = await testEnv.dbClient
       .container('user')
-      .items.query({
-        query: `SELECT * FROM user WHERE user.id = '${email}'`,
-      })
-      .fetchAll();
-    expect(dbQuery.resources.length).toBe(1);
-    expect(dbQuery.resources[0].id).toBe(email);
-    expect(dbQuery.resources[0].nickname).toBe(userMap.valid.nickname);
-    expect(dbQuery.resources[0].major).toBe(userMap.valid.major);
-    expect(dbQuery.resources[0].graduationYear).toBe(
-      userMap.valid.graduationYear
-    );
-    expect(dbQuery.resources[0].tncVersion).toBe(userMap.valid.tncVersion);
+      .item(userMap.valid.email)
+      .read();
+    expect(dbQuery.resource.id).toBe(userMap.valid.email);
+    expect(dbQuery.resource.nickname).toBe(userMap.valid.nickname);
+    expect(dbQuery.resource.major).toBe(userMap.valid.major);
+    expect(dbQuery.resource.graduationYear).toBe(userMap.valid.graduationYear);
+    expect(dbQuery.resource.tncVersion).toBe(userMap.valid.tncVersion);
   });
 });

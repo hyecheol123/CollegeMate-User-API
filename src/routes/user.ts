@@ -52,15 +52,6 @@ userRouter.post('/', async (req, res, next) => {
 
     // Check request body
     const userPostRequestObj: UserPostRequestObj = req.body;
-    if (userPostRequestObj.email !== undefined) {
-      userPostRequestObj.email = Buffer.from(
-        userPostRequestObj.email,
-        'base64url'
-      ).toString('utf8');
-    }
-    if (!validateEmail(userPostRequestObj.email)) {
-      throw new BadRequestError();
-    }
     if (!validateUserPostRequest(userPostRequestObj)) {
       throw new BadRequestError();
     }

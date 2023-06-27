@@ -168,8 +168,7 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
     //request with an expired admin token
     response = await request(testEnv.expressServer.app)
       .get(`/user/profile/${encodedEmail}`)
-      .set({'X-ACCESS-TOKEN': adminToken})
-      .set({Origin: 'https://collegemate.app'});
+      .set({'X-SERVER-TOKEN': adminToken});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
   });
@@ -211,8 +210,7 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
     //request with a wrong admin token - refresh token
     response = await request(testEnv.expressServer.app)
       .get(`/user/profile/${encodedEmail}`)
-      .set({'X-SERVER-TOKEN': wrongToken})
-      .set({Origin: 'https://collegemate.app'});
+      .set({'X-SERVER-TOKEN': wrongToken});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
@@ -231,8 +229,7 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
     //request with a wrong admin token - wrong type
     response = await request(testEnv.expressServer.app)
       .get(`/user/profile/${encodedEmail}`)
-      .set({'X-SERVER-TOKEN': wrongType})
-      .set({Origin: 'https://collegemate.app'});
+      .set({'X-SERVER-TOKEN': wrongType});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
   });
