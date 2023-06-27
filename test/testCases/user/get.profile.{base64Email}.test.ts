@@ -42,77 +42,46 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
     accessTokenMap.valid = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
-      {
-        algorithm: 'HS512',
-        expiresIn: '10m',
-      }
+      {algorithm: 'HS512', expiresIn: '10m'}
     );
 
     // Wrong Access Token
     // Token Content
-    tokenContent = {
-      id: 'wrong@wisc.edu',
-      type: 'refresh',
-      tokenType: 'user',
-    };
+    tokenContent = {id: 'wrong@wisc.edu', type: 'refresh', tokenType: 'user'};
     // Generate AccessToken
     accessTokenMap.wrong = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
-      {
-        algorithm: 'HS512',
-        expiresIn: '10m',
-      }
+      {algorithm: 'HS512', expiresIn: '10m'}
     );
 
     // Expired Access Token
     // Token Content
-    tokenContent = {
-      id: 'expired@wisc.edu',
-      type: 'access',
-      tokenType: 'user',
-    };
+    tokenContent = {id: 'expired@wisc.edu', type: 'access', tokenType: 'user'};
     // Generate AccessToken
     accessTokenMap.expired = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
-      {
-        algorithm: 'HS512',
-        expiresIn: '1ms',
-      }
+      {algorithm: 'HS512', expiresIn: '1ms'}
     );
 
     // Self Token
     // Token Content
-    tokenContent = {
-      id: 'steve@wisc.edu',
-      type: 'access',
-      tokenType: 'user',
-    };
+    tokenContent = {id: 'steve@wisc.edu', type: 'access', tokenType: 'user'};
     // Generate AccessToken
     accessTokenMap.steve = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
-      {
-        algorithm: 'HS512',
-        expiresIn: '10m',
-      }
+      {algorithm: 'HS512', expiresIn: '10m'}
     );
 
     // locked self Token
-    tokenContent = {
-      id: 'locked@wisc.edu',
-      type: 'access',
-      tokenType: 'user',
-    };
+    tokenContent = {id: 'locked@wisc.edu', type: 'access', tokenType: 'user'};
     // Generate AccessToken
     accessTokenMap.locked = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
-      {
-        algorithm: 'HS512',
-        expiresIn: '10m',
-      }
+      {algorithm: 'HS512', expiresIn: '10m'}
     );
   });
 
@@ -191,10 +160,7 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
         accountType: 'admin',
       },
       testEnv.testConfig.jwt.secretKey,
-      {
-        algorithm: 'HS512',
-        expiresIn: '1ms',
-      }
+      {algorithm: 'HS512', expiresIn: '1ms'}
     );
     // Wait for 5 ms
     await new Promise(resolve => setTimeout(resolve, 5));
@@ -239,10 +205,7 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
         accountType: 'admin',
       },
       testEnv.testConfig.jwt.secretKey,
-      {
-        algorithm: 'HS512',
-        expiresIn: '60min',
-      }
+      {algorithm: 'HS512', expiresIn: '60min'}
     );
 
     //request with a wrong admin token - refresh token
@@ -262,10 +225,7 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
         accountType: 'wrong',
       },
       testEnv.testConfig.jwt.secretKey,
-      {
-        algorithm: 'HS512',
-        expiresIn: '60min',
-      }
+      {algorithm: 'HS512', expiresIn: '60min'}
     );
 
     //request with a wrong admin token - wrong type
@@ -339,12 +299,16 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
     expect(response.body.nickname).toBe('steve');
     expect(response.body.major).toBe('Computer Science');
     expect(response.body.graduationYear).toBe(2024);
+    expect(new Date(response.body.signUpDate).toISOString()).toEqual(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
     expect(new Date(response.body.lastLogin).toISOString()).toEqual(
       new Date('2023-03-10T00:50:43.000Z').toISOString()
     );
     expect(new Date(response.body.nicknameChanged).toISOString()).toEqual(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
+    expect(response.body.tncVersion).toBe('v1.0.2');
     expect(response.body.deleted).toBe(false);
     expect(response.body.locked).toBe(false);
     expect(response.body).not.toHaveProperty('id');
@@ -361,12 +325,16 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
     expect(response.body.nickname).toBe('drag');
     expect(response.body.major).toBe('Computer Science');
     expect(response.body.graduationYear).toBe(2024);
+    expect(new Date(response.body.signUpDate).toISOString()).toEqual(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
     expect(new Date(response.body.lastLogin).toISOString()).toEqual(
       new Date('2023-03-10T00:50:43.000Z').toISOString()
     );
     expect(new Date(response.body.nicknameChanged).toISOString()).toEqual(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
+    expect(response.body.tncVersion).toBe('v1.0.2');
     expect(response.body.deleted).toBe(false);
     expect(response.body.locked).toBe(false);
     expect(response.body).not.toHaveProperty('id');
@@ -374,11 +342,95 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
     expect(response.body).not.toHaveProperty('lockedAt');
     expect(response.body).not.toHaveProperty('lockedDescription');
 
-    // TODO: Locked User
+    // Locked User
+    encodedEmail = Buffer.from('locked@wisc.edu', 'utf8').toString('base64url');
+    response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${encodedEmail}`)
+      .set({'X-SERVER-TOKEN': token});
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('locked');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(new Date(response.body.signUpDate).toISOString()).toEqual(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(new Date(response.body.lastLogin).toISOString()).toEqual(
+      new Date('2023-03-10T00:50:43.000Z').toISOString()
+    );
+    expect(new Date(response.body.nicknameChanged).toISOString()).toEqual(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(response.body.deleted).toBe(false);
+    expect(response.body.locked).toBe(true);
+    expect(response.body).not.toHaveProperty('id');
+    expect(response.body).not.toHaveProperty('deletedAt');
+    expect(new Date(response.body.lockedAt).toISOString()).toBe(
+      new Date('2023-03-10T00:55:48.183Z').toISOString()
+    );
+    expect(response.body.lockedDescription).toBe('Spam');
+    expect(response.body.tncVersion).toBe('v1.0.2');
 
-    // TODO: Deleted User
+    // Deleted User
+    encodedEmail = Buffer.from('deleted@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
+    response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${encodedEmail}`)
+      .set({'X-SERVER-TOKEN': token});
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('deleted');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(new Date(response.body.signUpDate).toISOString()).toEqual(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(new Date(response.body.lastLogin).toISOString()).toEqual(
+      new Date('2023-03-10T00:50:43.000Z').toISOString()
+    );
+    expect(new Date(response.body.nicknameChanged).toISOString()).toEqual(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(response.body.deleted).toBe(true);
+    expect(response.body.locked).toBe(false);
+    expect(response.body).not.toHaveProperty('id');
+    expect(new Date(response.body.deletedAt).toISOString()).toBe(
+      new Date('2023-03-10T00:55:48.183Z').toISOString()
+    );
+    expect(response.body.tncVersion).toBe('v1.0.2');
+    expect(response.body).not.toHaveProperty('lockedAt');
+    expect(response.body).not.toHaveProperty('lockedDescription');
 
-    // TODO: Locked and deleted User
+    // Locked and deleted User
+    encodedEmail = Buffer.from('locked-deleted@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
+    response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${encodedEmail}`)
+      .set({'X-SERVER-TOKEN': token});
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('locked&Deleted');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(new Date(response.body.signUpDate).toISOString()).toEqual(
+      new Date('2022-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(new Date(response.body.lastLogin).toISOString()).toEqual(
+      new Date('2022-03-10T00:50:43.000Z').toISOString()
+    );
+    expect(new Date(response.body.nicknameChanged).toISOString()).toEqual(
+      new Date('2022-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(response.body.deleted).toBe(true);
+    expect(response.body.locked).toBe(true);
+    expect(response.body).not.toHaveProperty('id');
+    expect(new Date(response.body.deletedAt).toISOString()).toBe(
+      new Date('2023-02-11T00:55:48.183Z').toISOString()
+    );
+    expect(new Date(response.body.lockedAt).toISOString()).toBe(
+      new Date('2023-02-10T00:55:48.183Z').toISOString()
+    );
+    expect(response.body.lockedDescription).toBe('Spam');
+    expect(response.body.tncVersion).toBe('v1.0.1');
   });
 
   test('Success - Owner Request', async () => {
@@ -434,19 +486,77 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
     expect(response.body).not.toHaveProperty('lockedAt');
     expect(response.body).not.toHaveProperty('tncVersion');
 
-    // TODO: request self - deleted user
+    // request self - deleted user
+    encodedEmail = Buffer.from('deleted@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
+    let token = jwt.sign(
+      {id: 'deleted@wisc.edu', type: 'access', tokenType: 'user'},
+      testEnv.testConfig.jwt.secretKey,
+      {algorithm: 'HS512', expiresIn: '10m'}
+    );
+    response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${encodedEmail}`)
+      .set({'X-ACCESS-TOKEN': token})
+      .set({Origin: 'https://collegemate.app'});
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('deleted');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(new Date(response.body.lastLogin).toISOString()).toEqual(
+      new Date('2023-03-10T00:50:43.000Z').toISOString()
+    );
+    expect(new Date(response.body.nicknameChanged).toISOString()).toEqual(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(response.body).not.toHaveProperty('signUpDate');
+    expect(response.body).not.toHaveProperty('deleted');
+    expect(response.body).not.toHaveProperty('deletedAt');
+    expect(response.body).not.toHaveProperty('locked');
+    expect(response.body).not.toHaveProperty('lockedDescription');
+    expect(response.body).not.toHaveProperty('lockedAt');
+    expect(response.body).not.toHaveProperty('tncVersion');
 
-    // TODO: request self - deleted and locked user
+    // request self - deleted and locked user
+    encodedEmail = Buffer.from('locked-deleted@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
+    token = jwt.sign(
+      {id: 'locked-deleted@wisc.edu', type: 'access', tokenType: 'user'},
+      testEnv.testConfig.jwt.secretKey,
+      {algorithm: 'HS512', expiresIn: '10m'}
+    );
+    response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${encodedEmail}`)
+      .set({'X-ACCESS-TOKEN': token})
+      .set({Origin: 'https://collegemate.app'});
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('locked&Deleted');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(new Date(response.body.lastLogin).toISOString()).toEqual(
+      new Date('2022-03-10T00:50:43.000Z').toISOString()
+    );
+    expect(new Date(response.body.nicknameChanged).toISOString()).toEqual(
+      new Date('2022-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(response.body).not.toHaveProperty('signUpDate');
+    expect(response.body).not.toHaveProperty('deleted');
+    expect(response.body).not.toHaveProperty('deletedAt');
+    expect(response.body).not.toHaveProperty('locked');
+    expect(response.body).not.toHaveProperty('lockedDescription');
+    expect(response.body).not.toHaveProperty('lockedAt');
+    expect(response.body).not.toHaveProperty('tncVersion');
   });
 
   test('Success - Other Users Request', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
     // Request From Web - different user
-    const encodedEmail = Buffer.from('drag@wisc.edu', 'utf8').toString(
+    let encodedEmail = Buffer.from('drag@wisc.edu', 'utf8').toString(
       'base64url'
     );
-    const response = await request(testEnv.expressServer.app)
+    let response = await request(testEnv.expressServer.app)
       .get(`/user/profile/${encodedEmail}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'});
@@ -464,10 +574,68 @@ describe('GET /user/profile/{base64id} - Get User Profile', () => {
     expect(response.body).not.toHaveProperty('lockedAt');
     expect(response.body).not.toHaveProperty('tncVersion');
 
-    // TODO: Deleted User
+    // Deleted User
+    encodedEmail = Buffer.from('deleted@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
+    response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${encodedEmail}`)
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'});
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('deleted');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(response.body).not.toHaveProperty('lastLogin');
+    expect(response.body).not.toHaveProperty('signUpDate');
+    expect(response.body).not.toHaveProperty('nicknameChanged');
+    expect(response.body).not.toHaveProperty('deleted');
+    expect(response.body).not.toHaveProperty('deletedAt');
+    expect(response.body).not.toHaveProperty('locked');
+    expect(response.body).not.toHaveProperty('lockedDescription');
+    expect(response.body).not.toHaveProperty('lockedAt');
+    expect(response.body).not.toHaveProperty('tncVersion');
 
-    // TODO: Locked User
+    // Locked User
+    encodedEmail = Buffer.from('locked@wisc.edu', 'utf8').toString('base64url');
+    response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${encodedEmail}`)
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'});
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('locked');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(response.body).not.toHaveProperty('lastLogin');
+    expect(response.body).not.toHaveProperty('signUpDate');
+    expect(response.body).not.toHaveProperty('nicknameChanged');
+    expect(response.body).not.toHaveProperty('deleted');
+    expect(response.body).not.toHaveProperty('deletedAt');
+    expect(response.body).not.toHaveProperty('locked');
+    expect(response.body).not.toHaveProperty('lockedDescription');
+    expect(response.body).not.toHaveProperty('lockedAt');
+    expect(response.body).not.toHaveProperty('tncVersion');
 
-    // TODO: Locked and Deleted User
+    // Locked and Deleted User
+    encodedEmail = Buffer.from('locked-deleted@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
+    response = await request(testEnv.expressServer.app)
+      .get(`/user/profile/${encodedEmail}`)
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'});
+    expect(response.status).toBe(200);
+    expect(response.body.nickname).toBe('locked&Deleted');
+    expect(response.body.major).toBe('Computer Science');
+    expect(response.body.graduationYear).toBe(2024);
+    expect(response.body).not.toHaveProperty('lastLogin');
+    expect(response.body).not.toHaveProperty('signUpDate');
+    expect(response.body).not.toHaveProperty('nicknameChanged');
+    expect(response.body).not.toHaveProperty('deleted');
+    expect(response.body).not.toHaveProperty('deletedAt');
+    expect(response.body).not.toHaveProperty('locked');
+    expect(response.body).not.toHaveProperty('lockedDescription');
+    expect(response.body).not.toHaveProperty('lockedAt');
+    expect(response.body).not.toHaveProperty('tncVersion');
   });
 });
