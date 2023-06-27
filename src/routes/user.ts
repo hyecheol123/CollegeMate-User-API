@@ -16,13 +16,13 @@ import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import ConflictError from '../exceptions/ConflictError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
+import NotFoundError from '../exceptions/NotFoundError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
 import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
-import NotFoundError from '../exceptions/NotFoundError';
 
 // Path: /user
 const userRouter = express.Router();
@@ -55,7 +55,7 @@ userRouter.post('/', async (req, res, next) => {
     if (userPostRequestObj.email !== undefined) {
       userPostRequestObj.email = Buffer.from(
         userPostRequestObj.email,
-        'base64'
+        'base64url'
       ).toString('utf8');
     }
     if (!validateEmail(userPostRequestObj.email)) {
