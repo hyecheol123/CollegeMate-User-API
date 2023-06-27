@@ -5,26 +5,27 @@
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 import * as Cosmos from '@azure/cosmos';
+import NotFoundError from '../../exceptions/NotFoundError';
 
 const USER = 'user';
 
 export default class User {
-  email: string;
+  id: string;
   nickname: string;
   lastLogin: Date | string;
   signUpDate: Date | string;
   nicknameChanged: Date | string;
-  deleted: boolean;
-  deletedAt?: Date | string;
-  locked: boolean;
-  lockedDescription?: string;
-  lockedAt?: Date | string;
   major: string;
   graduationYear: number;
   tncVersion: string;
+  deleted: boolean;
+  locked: boolean;
+  deletedAt?: Date | string;
+  lockedDescription?: string;
+  lockedAt?: Date | string;
 
   constructor(
-    email: string,
+    id: string,
     nickname: string,
     lastLogin: Date,
     signUpDate: Date,
@@ -36,7 +37,7 @@ export default class User {
     locked: false
   );
   constructor(
-    email: string,
+    id: string,
     nickname: string,
     lastLogin: Date,
     signUpDate: Date,
@@ -49,7 +50,7 @@ export default class User {
     deletedAt: Date
   );
   constructor(
-    email: string,
+    id: string,
     nickname: string,
     lastLogin: Date,
     signUpDate: Date,
@@ -64,7 +65,7 @@ export default class User {
     lockedAt: Date
   );
   constructor(
-    email: string,
+    id: string,
     nickname: string,
     lastLogin: Date,
     signUpDate: Date,
@@ -81,22 +82,22 @@ export default class User {
   /**
    * Constructor for User Object
    *
-   * @param {string} email - email of the user
+   * @param {string} id - email of the user
    * @param {string} nickname - nickname of the user
    * @param {Date} lastLogin - last login date of the user
    * @param {Date} signUpDate - sign up date of the user
    * @param {Date} nicknameChanged - nickname changed date of the user
-   * @param {boolean} deleted - whether the user is deleted or not
-   * @param {Date | undefined} deletedAt - date when the user is deleted - undefined if the user is not deleted
-   * @param {boolean} locked - whether the user is locked or not
-   * @param {string | undefined} lockedDescription - description of the lock - undefined if the user is not locked
-   * @param {Date | undefined} lockedAt - date when the user is locked - undefined if the user is not locked
    * @param {string} major - major of the user
    * @param {number} graduationYear - graduation year of the user
    * @param {string} tncVersion - terms and conditions version of the user
+   * @param {boolean} deleted - whether the user is deleted or not
+   * @param {boolean} locked - whether the user is locked or not
+   * @param {Date | undefined} deletedAt - date when the user is deleted - undefined if the user is not deleted
+   * @param {string | undefined} lockedDescription - description of the lock - undefined if the user is not locked
+   * @param {Date | undefined} lockedAt - date when the user is locked - undefined if the user is not locked
    */
   constructor(
-    email: string,
+    id: string,
     nickname: string,
     lastLogin: Date,
     signUpDate: Date,
@@ -110,7 +111,7 @@ export default class User {
     lockedDescription?: string,
     lockedAt?: Date
   ) {
-    this.email = email;
+    this.id = id;
     this.nickname = nickname;
     this.lastLogin = lastLogin;
     this.signUpDate = signUpDate;
@@ -172,5 +173,80 @@ export default class User {
           .fetchAll()
       ).resources.length === 0
     );
+  }
+
+  /**
+   * Retrieve user information from the database
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} email email of the user
+   */
+  static async read(dbClient: Cosmos.Database, email: string): Promise<User> {
+    // Query that retrieves user information from the database
+    const result = await dbClient.container(USER).item(email).read<User>();
+    if (result.statusCode === 404 || result.resource === undefined) {
+      throw new NotFoundError();
+    }
+
+    if (!result.resource.deleted && !result.resource.locked) {
+      return new User(
+        result.resource.id,
+        result.resource.nickname,
+        new Date(result.resource.lastLogin),
+        new Date(result.resource.signUpDate),
+        new Date(result.resource.nicknameChanged),
+        result.resource.major,
+        result.resource.graduationYear,
+        result.resource.tncVersion,
+        false,
+        false
+      );
+    } else if (!result.resource.deleted && result.resource.locked) {
+      return new User(
+        result.resource.id,
+        result.resource.nickname,
+        new Date(result.resource.lastLogin),
+        new Date(result.resource.signUpDate),
+        new Date(result.resource.nicknameChanged),
+        result.resource.major,
+        result.resource.graduationYear,
+        result.resource.tncVersion,
+        false,
+        true,
+        undefined,
+        result.resource.lockedDescription as string,
+        new Date(result.resource.lockedAt as string)
+      );
+    } else if (result.resource.deleted && !result.resource.locked) {
+      return new User(
+        result.resource.id,
+        result.resource.nickname,
+        new Date(result.resource.lastLogin),
+        new Date(result.resource.signUpDate),
+        new Date(result.resource.nicknameChanged),
+        result.resource.major,
+        result.resource.graduationYear,
+        result.resource.tncVersion,
+        true,
+        false,
+        new Date(result.resource.deletedAt as string)
+      );
+    } else {
+      return new User(
+        result.resource.id,
+        result.resource.nickname,
+        new Date(result.resource.lastLogin),
+        new Date(result.resource.signUpDate),
+        new Date(result.resource.nicknameChanged),
+        result.resource.major,
+        result.resource.graduationYear,
+        result.resource.tncVersion,
+        true,
+        true,
+        new Date(result.resource.deletedAt as string),
+        result.resource.lockedDescription as string,
+        new Date(result.resource.lockedAt as string)
+      );
+    }
   }
 }

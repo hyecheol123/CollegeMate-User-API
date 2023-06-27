@@ -203,7 +203,7 @@ describe('POST /user - Create User', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send({
-        email: userMap.valid.email,
+        id: userMap.valid.email,
         nickname: userMap.valid.nickname,
         major: userMap.valid.major,
         graduationYear: userMap.valid.graduationYear,
@@ -219,7 +219,7 @@ describe('POST /user - Create User', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send({
-        email: userMap.valid.email,
+        id: userMap.valid.email,
         major: userMap.valid.major,
         graduationYear: userMap.valid.graduationYear,
         tncVersion: userMap.valid.tncVersion,
@@ -248,7 +248,7 @@ describe('POST /user - Create User', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send({
-        email: userMap.valid.email,
+        id: userMap.valid.email,
         nickname: userMap.valid.nickname,
         major: userMap.valid.major,
         tncVersion: userMap.valid.tncVersion,
@@ -258,7 +258,7 @@ describe('POST /user - Create User', () => {
 
     // RequestBody with invalid graduationYear
     const reqBody = {
-      email: userMap.valid.email,
+      id: userMap.valid.email,
       nickname: userMap.valid.nickname,
       major: userMap.valid.major,
       graduationYear: 2500, // Invalid graduationYear too high
@@ -347,22 +347,16 @@ describe('POST /user - Create User', () => {
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(userMap.valid);
     expect(response.status).toBe(201);
-
     // Check if user is created in database
     const dbQuery = await testEnv.dbClient
       .container('user')
-      .items.query({
-        query: `SELECT * FROM user WHERE user.email = '${userMap.valid.email}'`,
-      })
-      .fetchAll();
-    expect(dbQuery.resources.length).toBe(1);
-    expect(dbQuery.resources[0].email).toBe(userMap.valid.email);
-    expect(dbQuery.resources[0].nickname).toBe(userMap.valid.nickname);
-    expect(dbQuery.resources[0].major).toBe(userMap.valid.major);
-    expect(dbQuery.resources[0].graduationYear).toBe(
-      userMap.valid.graduationYear
-    );
-    expect(dbQuery.resources[0].tncVersion).toBe(userMap.valid.tncVersion);
+      .item(userMap.valid.email)
+      .read();
+    expect(dbQuery.resource.id).toBe(userMap.valid.email);
+    expect(dbQuery.resource.nickname).toBe(userMap.valid.nickname);
+    expect(dbQuery.resource.major).toBe(userMap.valid.major);
+    expect(dbQuery.resource.graduationYear).toBe(userMap.valid.graduationYear);
+    expect(dbQuery.resource.tncVersion).toBe(userMap.valid.tncVersion);
   });
 
   test('Success - Web', async () => {
@@ -380,17 +374,12 @@ describe('POST /user - Create User', () => {
     // Check if user is created in database
     const dbQuery = await testEnv.dbClient
       .container('user')
-      .items.query({
-        query: `SELECT * FROM user WHERE user.email = '${userMap.valid.email}'`,
-      })
-      .fetchAll();
-    expect(dbQuery.resources.length).toBe(1);
-    expect(dbQuery.resources[0].email).toBe(userMap.valid.email);
-    expect(dbQuery.resources[0].nickname).toBe(userMap.valid.nickname);
-    expect(dbQuery.resources[0].major).toBe(userMap.valid.major);
-    expect(dbQuery.resources[0].graduationYear).toBe(
-      userMap.valid.graduationYear
-    );
-    expect(dbQuery.resources[0].tncVersion).toBe(userMap.valid.tncVersion);
+      .item(userMap.valid.email)
+      .read();
+    expect(dbQuery.resource.id).toBe(userMap.valid.email);
+    expect(dbQuery.resource.nickname).toBe(userMap.valid.nickname);
+    expect(dbQuery.resource.major).toBe(userMap.valid.major);
+    expect(dbQuery.resource.graduationYear).toBe(userMap.valid.graduationYear);
+    expect(dbQuery.resource.tncVersion).toBe(userMap.valid.tncVersion);
   });
 });

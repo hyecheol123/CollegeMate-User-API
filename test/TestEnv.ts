@@ -91,7 +91,7 @@ export default class TestEnv {
     const userSamples: User[] = [];
     userSamples.push(
       {
-        email: 'steve@wisc.edu',
+        id: 'steve@wisc.edu',
         nickname: 'steve',
         lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
         signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
@@ -103,7 +103,7 @@ export default class TestEnv {
         tncVersion: 'v1.0.2',
       },
       {
-        email: 'drag@wisc.edu',
+        id: 'drag@wisc.edu',
         nickname: 'drag',
         lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
         signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
@@ -115,31 +115,46 @@ export default class TestEnv {
         tncVersion: 'v1.0.2',
       },
       {
-        email: 'deleted@wisc.edu',
+        id: 'deleted@wisc.edu',
         nickname: 'deleted',
         lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
         signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
         nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
         deleted: true,
-        deletedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
         locked: false,
+        deletedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
         major: 'Computer Science',
         graduationYear: 2024,
         tncVersion: 'v1.0.2',
       },
       {
-        email: 'locked@wisc.edu',
+        id: 'locked@wisc.edu',
         nickname: 'locked',
         lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
         signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
         nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
         deleted: false,
-        locked: false,
+        locked: true,
         lockedDescription: 'Spam',
         lockedAt: new Date('2023-03-10T00:55:48.183Z').toISOString(),
         major: 'Computer Science',
         graduationYear: 2024,
         tncVersion: 'v1.0.2',
+      },
+      {
+        id: 'locked-deleted@wisc.edu',
+        nickname: 'locked&Deleted',
+        lastLogin: new Date('2022-03-10T00:50:43.000Z').toISOString(),
+        signUpDate: new Date('2022-02-10T00:50:43.000Z').toISOString(),
+        nicknameChanged: new Date('2022-02-10T00:50:43.000Z').toISOString(),
+        deleted: true,
+        locked: true,
+        deletedAt: new Date('2023-02-11T00:55:48.183Z').toISOString(),
+        lockedDescription: 'Spam',
+        lockedAt: new Date('2023-02-10T00:55:48.183Z').toISOString(),
+        major: 'Computer Science',
+        graduationYear: 2024,
+        tncVersion: 'v1.0.1',
       }
     );
     for (let index = 0; index < userSamples.length; index++) {

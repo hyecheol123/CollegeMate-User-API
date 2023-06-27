@@ -7,16 +7,22 @@
 
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
+import {Buffer} from 'node:buffer';
 import User from '../datatypes/User/User';
 import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
 import getTnC from '../datatypes/TNC/getTnC';
+import AuthToken from '../datatypes/Token/AuthToken';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import ConflictError from '../exceptions/ConflictError';
 import UnauthenticatedError from '../exceptions/UnauthenticatedError';
+import NotFoundError from '../exceptions/NotFoundError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
-import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostRequest';
+import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
+import {validateEmail} from '../functions/inputValidator/validateEmail';
+import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
+import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
 
 // Path: /user
 const userRouter = express.Router();
@@ -95,33 +101,116 @@ userRouter.post('/', async (req, res, next) => {
   }
 });
 
-// // DELETE: /user/{base64Email}
-// userRouter.delete('/:base64Email', async (req, res, next) => {
+// // DELETE: /user/profile/{base64Email}
+// userRouter.delete('/profile/:base64Email', async (req, res, next) => {
 //   // TODO
 // });
 
-// // PATCH: /user/{base64Email}
-// userRouter.patch('/:base64Email', async (req, res, next) => {
+// // PATCH: /user/profile/{base64Email}
+// userRouter.patch('/profile/:base64Email', async (req, res, next) => {
 //   // TODO
 // });
 
-// // GET: /user/{base64Email}
-// userRouter.get('/:base64Email', async (req, res, next) => {
+// GET: /user/profile/{base64Email}
+userRouter.get('/profile/:base64Email', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Header check - access token or Origin header or application key
+    const serverToken = req.header('X-SERVER-TOKEN');
+    if (
+      serverToken === undefined &&
+      req.header('Origin') !== req.app.get('webpageOrigin') &&
+      !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
+    ) {
+      throw new ForbiddenError();
+    }
+
+    // Check server admin token or access token - which is provided
+    let tokenContents: AuthToken | undefined = undefined;
+    const accessToken = req.header('X-ACCESS-TOKEN');
+    if (serverToken !== undefined) {
+      verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
+    } else if (accessToken !== undefined) {
+      tokenContents = verifyAccessToken(
+        accessToken,
+        req.app.get('jwtAccessKey')
+      );
+    } else {
+      throw new UnauthenticatedError();
+    }
+
+    // Check request body
+    let calledUserStatus: 'self' | 'other' | 'serverAdmin';
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64url'
+    ).toString('utf8');
+    if (!validateEmail(requestUserEmail)) {
+      throw new NotFoundError();
+    }
+    if (tokenContents !== undefined) {
+      calledUserStatus =
+        tokenContents.id === requestUserEmail
+          ? (calledUserStatus = 'self')
+          : (calledUserStatus = 'other');
+    } else {
+      calledUserStatus = 'serverAdmin';
+    }
+
+    // DB operation - Get user information
+    const requestUser = await User.read(dbClient, requestUserEmail);
+    const userProfileResponseObj: UserProfileResponseObj = {
+      nickname: requestUser.nickname,
+      major: requestUser.major,
+      graduationYear: requestUser.graduationYear,
+    };
+    if (calledUserStatus !== 'other') {
+      userProfileResponseObj.lastLogin = (
+        requestUser.lastLogin as Date
+      ).toISOString();
+      userProfileResponseObj.nicknameChanged = (
+        requestUser.nicknameChanged as Date
+      ).toISOString();
+    }
+    if (calledUserStatus === 'serverAdmin') {
+      userProfileResponseObj.signUpDate = (
+        requestUser.signUpDate as Date
+      ).toISOString();
+      userProfileResponseObj.deleted = requestUser.deleted;
+      if (requestUser.deleted) {
+        userProfileResponseObj.deletedAt = (
+          requestUser.deletedAt as Date
+        ).toISOString();
+      }
+      userProfileResponseObj.locked = requestUser.locked;
+      if (requestUser.locked) {
+        userProfileResponseObj.lockedDescription =
+          requestUser.lockedDescription;
+        userProfileResponseObj.lockedAt = (
+          requestUser.lockedAt as Date
+        ).toISOString();
+      }
+      userProfileResponseObj.tncVersion = requestUser.tncVersion;
+    }
+    res.status(200).json(userProfileResponseObj);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// // POST: /user/profile/{base64Email}/accepttnc
+// userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
 //   // TODO
 // });
 
-// // POST: /user/{base64Email}/accepttnc
-// userRouter.post('/:base64Email/accepttnc', async (req, res, next) => {
+// // POST: /user/profile/{base64Email}/lastlogin
+// userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
 //   // TODO
 // });
 
-// // POST: /user/{base64Email}/lastlogin
-// userRouter.post('/:base64Email/lastlogin', async (req, res, next) => {
-//   // TODO
-// });
-
-// // POST: /user/{base64Email}/lock
-// userRouter.post('/:base64Email/lock', async (req, res, next) => {
+// // POST: /user/profile/{base64Email}/lock
+// userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
 //   // TODO
 // });
 
