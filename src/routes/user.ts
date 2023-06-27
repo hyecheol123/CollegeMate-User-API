@@ -19,7 +19,7 @@ import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
 import {validateEmail} from '../functions/inputValidator/validateEmail';
-import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostRequest';
+import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
 import NotFoundError from '../exceptions/NotFoundError';
@@ -52,13 +52,13 @@ userRouter.post('/', async (req, res, next) => {
 
     // Check request body
     const userPostRequestObj: UserPostRequestObj = req.body;
-    if (userPostRequestObj.id !== undefined) {
-      userPostRequestObj.id = Buffer.from(
-        userPostRequestObj.id,
+    if (userPostRequestObj.email !== undefined) {
+      userPostRequestObj.email = Buffer.from(
+        userPostRequestObj.email,
         'base64'
       ).toString('utf8');
     }
-    if (!validateEmail(userPostRequestObj.id)) {
+    if (!validateEmail(userPostRequestObj.email)) {
       throw new BadRequestError();
     }
     if (!validateUserPostRequest(userPostRequestObj)) {
@@ -66,7 +66,7 @@ userRouter.post('/', async (req, res, next) => {
     }
 
     // Check if access token has the same email as the request body
-    if (tokenContents.id !== userPostRequestObj.id) {
+    if (tokenContents.id !== userPostRequestObj.email) {
       throw new ForbiddenError();
     }
 
@@ -92,7 +92,7 @@ userRouter.post('/', async (req, res, next) => {
     // DB operation - create user
     const currDate = new Date();
     const user = new User(
-      userPostRequestObj.id,
+      userPostRequestObj.email,
       userPostRequestObj.nickname,
       currDate,
       currDate,
