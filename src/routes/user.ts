@@ -7,7 +7,7 @@
 
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
-import {Buffer} from 'node:buffer';
+import { Buffer } from 'node:buffer';
 import User from '../datatypes/User/User';
 import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
 import getTnC from '../datatypes/TNC/getTnC';
@@ -19,10 +19,10 @@ import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import NotFoundError from '../exceptions/NotFoundError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
-import {validateLockUserRequest} from '../functions/inputValidator/validateLockUserRequest';
-import {validateEmail} from '../functions/inputValidator/validateEmail';
-import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
-import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
+import { validateLockUserRequest } from '../functions/inputValidator/validateLockUserRequest';
+import { validateEmail } from '../functions/inputValidator/validateEmail';
+import { validateUserPostRequest } from '../functions/inputValidator/validateUserPostProfileRequest';
+import { validateVerifyNicknameRequest } from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
 
 // Path: /user
@@ -225,7 +225,7 @@ userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
     const requestUserEmail = req.params.base64Email;
 
     // Check request body
-    const lockUserRequest: {description: string} = req.body;
+    const lockUserRequest: { description: string } = req.body;
     if (!validateLockUserRequest(lockUserRequest)) {
       throw new BadRequestError();
     }
@@ -235,10 +235,6 @@ userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
       throw new ConflictError();
     }
     await User.lock(dbClient, requestUserEmail, lockUserRequest.description);
-
-    // Send email/notification to user
-    // TODO: GraphQL + Modules needed to implement this feature
-    // TODO: Implement email sending feature and notification feature
 
     // response
     res.status(200).send();
@@ -268,7 +264,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
     verifyAccessToken(accessToken, req.app.get('jwtAccessKey'));
 
     // Check request body
-    const nicknameVerifyRequest: {nickname: string} = req.body;
+    const nicknameVerifyRequest: { nickname: string } = req.body;
     if (!validateVerifyNicknameRequest(nicknameVerifyRequest)) {
       throw new BadRequestError();
     }
@@ -279,7 +275,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
       nicknameVerifyRequest.nickname
     );
 
-    res.status(200).json({isAvailable: available});
+    res.status(200).json({ isAvailable: available });
   } catch (e) {
     next(e);
   }
