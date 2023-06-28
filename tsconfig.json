@@ -6,9 +6,12 @@
     "lib": [
       "ES2020"
     ],
-    "types": ["jest"]
+    "types": [
+      "jest"
+    ]
   },
   "include": [
-    "src/**/*.ts","**/*.test.ts"
+    "src/**/*.ts",
+    "**/*.test.ts",
   ]
 }

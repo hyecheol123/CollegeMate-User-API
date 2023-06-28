@@ -31,6 +31,7 @@ export default class TestConfig extends ServerConfigTemplate {
       expressPort: 3000,
       webpageOrigin: 'https://collegemate.app',
       applicationKey: ['<Android-App-v1>', '<iOS-App-v1>'],
+      serverApplicationKey: '<API-Servers>',
       jwtKeys: {secretKey: 'keySecret'},
       serverDomainPath: {domain: 'api.collegemate.app'},
       serverAdminKey: '',

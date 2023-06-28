@@ -44,6 +44,7 @@ export default class ExpressServer {
     // Origin and Application Key
     this.app.set('webpageOrigin', config.webpageOrigin);
     this.app.set('applicationKey', config.applicationKey);
+    this.app.set('serverApplicationKey', config.serverApplicationKey);
     this.app.set('serverAdminKey', config.serverAdminKey);
 
     // Only Allow GET, POST, DELETE, PUT, PATCH method

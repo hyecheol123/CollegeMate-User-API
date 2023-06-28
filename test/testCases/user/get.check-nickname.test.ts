@@ -1,6 +1,7 @@
 /**
  * Jest unit test for GET /user/check-nickname method
  *
+ * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 
@@ -11,7 +12,6 @@ import * as Cosmos from '@azure/cosmos';
 import TestEnv from '../../TestEnv';
 import ExpressServer from '../../../src/ExpressServer';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
-import User from '../../../src/datatypes/User/User';
 
 describe('GET /user/check-nickname - Verify Nickname', () => {
   let testEnv: TestEnv;
@@ -96,6 +96,15 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
+    // Request From Not Permitted Application Key
+    response = await request(testEnv.expressServer.app)
+      .get('/user/check-nickname')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<NOT PERMITTED APP>'})
+      .send({nickname: 'newNickname'});
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
+
     // Request with Missing Origin and Application Key
     response = await request(testEnv.expressServer.app)
       .get('/user/check-nickname')
@@ -108,7 +117,7 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
   test('Fail - Additional or No Request Body', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
-    // Request with only additional property
+    // Request with not permitted property
     let response = await request(testEnv.expressServer.app)
       .get('/user/check-nickname')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
@@ -180,63 +189,8 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
     testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
-    // Test when there is no user in the DB
-    // Request From Not Permitted Origin
-    let response = await request(testEnv.expressServer.app)
-      .get('/user/check-nickname')
-      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
-      .set({Origin: 'https://collegemate.app'})
-      .send({nickname: 'newNickname'});
-    expect(response.status).toBe(200);
-    expect(response.body.isAvailable).toBe(true);
-
-    // Request with Missing Origin and Application Key
-    response = await request(testEnv.expressServer.app)
-      .get('/user/check-nickname')
-      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
-      .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
-      .send({nickname: 'newNickname'});
-    expect(response.status).toBe(200);
-    expect(response.body.isAvailable).toBe(true);
-
-    // Create a new user
-    // create multiple users to check if the function can iterate through all the users
-    let user = new User(
-      'steve@wisc.edu',
-      'steve',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      false,
-      undefined,
-      undefined,
-      'Computer Science',
-      2024,
-      '0.0.1'
-    );
-    await testEnv.dbClient.container('user').items.create(user);
-    user = new User(
-      'drag@wisc.edu',
-      'drag',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      false,
-      undefined,
-      undefined,
-      'Computer Science',
-      2024,
-      '0.0.1'
-    );
-    await testEnv.dbClient.container('user').items.create(user);
-
-    // Test when there is a user in the DB
     // Request from Web
-    response = await request(testEnv.expressServer.app)
+    let response = await request(testEnv.expressServer.app)
       .get('/user/check-nickname')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({Origin: 'https://collegemate.app'})
@@ -250,6 +204,7 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send({nickname: 'newNickname'});
+
     expect(response.status).toBe(200);
     expect(response.body.isAvailable).toBe(true);
   });
@@ -258,41 +213,6 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
     testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
-    // Create a new user
-    // create multiple users to check if the function can iterate through all the users
-    let user = new User(
-      'steve@wisc.edu',
-      'steve',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      false,
-      undefined,
-      undefined,
-      'Computer Science',
-      2024,
-      '0.0.1'
-    );
-    await testEnv.dbClient.container('user').items.create(user);
-    user = new User(
-      'drag@wisc.edu',
-      'drag',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      false,
-      undefined,
-      undefined,
-      'Computer Science',
-      2024,
-      '0.0.1'
-    );
-    await testEnv.dbClient.container('user').items.create(user);
-
     // Request From Web
     let response = await request(testEnv.expressServer.app)
       .get('/user/check-nickname')
@@ -308,6 +228,15 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send({nickname: 'steve'});
+    expect(response.status).toBe(200);
+    expect(response.body.isAvailable).toBe(false);
+
+    // Locked user
+    response = await request(testEnv.expressServer.app)
+      .get('/user/check-nickname')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
+      .send({nickname: 'locked'});
     expect(response.status).toBe(200);
     expect(response.body.isAvailable).toBe(false);
   });
@@ -316,56 +245,21 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
     testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
-    // Create a new user
-
-    let user = new User(
-      'steve@wisc.edu',
-      'steve',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      true,
-      new Date().toISOString(),
-      false,
-      undefined,
-      undefined,
-      'Computer Science',
-      2024,
-      '0.0.1'
-    );
-    await testEnv.dbClient.container('user').items.create(user);
-    user = new User(
-      'drag@wisc.edu',
-      'drag',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      true,
-      'he is bad boy',
-      new Date().toISOString(),
-      'Computer Science',
-      2024,
-      '0.0.1'
-    );
-    await testEnv.dbClient.container('user').items.create(user);
-
     // Request From Web
     let response = await request(testEnv.expressServer.app)
       .get('/user/check-nickname')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({Origin: 'https://collegemate.app'})
-      .send({nickname: 'drag'});
+      .send({nickname: 'deleted'});
     expect(response.status).toBe(200);
-    expect(response.body.isAvailable).toBe(false);
+    expect(response.body.isAvailable).toBe(true);
 
     // Request From App
     response = await request(testEnv.expressServer.app)
       .get('/user/check-nickname')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
-      .send({nickname: 'steve'});
+      .send({nickname: 'deleted'});
     expect(response.status).toBe(200);
     expect(response.body.isAvailable).toBe(true);
   });
