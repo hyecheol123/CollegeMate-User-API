@@ -188,11 +188,7 @@ userRouter.patch('/profile/:base64Email', async (req, res, next) => {
       updateObj.graduationYear = userUpdateRequest.graduationYear;
     }
 
-    await User.update(
-      dbClient,
-      requestUserEmail,
-      updateObj,
-    );
+    await User.update(dbClient, requestUserEmail, updateObj);
 
     res.status(200).send();
   } catch (e) {
