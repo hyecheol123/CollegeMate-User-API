@@ -249,4 +249,29 @@ export default class User {
       );
     }
   }
+
+  /**
+   * Update lastLogin field of user with date-time provided
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} id id of the user to lock
+   * @param {string} lastLogin description of the lock
+   */
+  static async updateLastLogin(
+    dbClient: Cosmos.Database,
+    id: string,
+    lastLogin: string
+  ): Promise<void> {
+    // Query that locks the user
+    const dbOps = await dbClient
+      .container(USER)
+      .item(id)
+      .patch([
+        {op: 'set', path: '/lastLogin', value: lastLogin},
+      ]);
+
+    if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
+      throw new NotFoundError();
+    }
+  }
 }

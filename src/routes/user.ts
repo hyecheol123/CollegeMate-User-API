@@ -23,6 +23,7 @@ import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import { validateLastLoginRequest } from '../functions/inputValidator/validateLastLoginRequest';
 
 // Path: /user
 const userRouter = express.Router();
@@ -204,10 +205,44 @@ userRouter.get('/profile/:base64Email', async (req, res, next) => {
 //   // TODO
 // });
 
-// // POST: /user/profile/{base64Email}/lastlogin
-// userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
-//   // TODO
-// });
+// POST: /user/profile/{base64Email}/lastlogin
+userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Header check - serverAdminToken
+    const serverToken = req.header('X-SERVER-TOKEN');
+    if (serverToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
+    // TODO: check if call is from auth
+
+    // Check parameter
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64url'
+    ).toString('utf8');
+    
+    if (!validateEmail(requestUserEmail)) {
+      throw new NotFoundError();
+    }
+
+    // Check request body
+    const lastLoginRequest: { description: string } = req.body;
+    if (!validateLastLoginRequest(lastLoginRequest)) {
+      throw new BadRequestError();
+    }
+
+    // update User lastLogin with requested email
+    await User.updateLastLogin(dbClient, requestUserEmail, lastLoginRequest.lastLogin);
+
+    // response
+    res.status(200).send();
+  } catch (e) {
+    next(e);
+  }
+});
 
 // // POST: /user/profile/{base64Email}/lock
 // userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
