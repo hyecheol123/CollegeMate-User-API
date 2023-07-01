@@ -23,6 +23,8 @@ import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import {validateDeleteAcountRequest} from '../functions/inputValidator/validateDeleteAcountRequest';
+import verifyOTPRequest from '../datatypes/OTP/verifyOTPRequest';
 
 // Path: /user
 const userRouter = express.Router();
@@ -101,10 +103,79 @@ userRouter.post('/', async (req, res, next) => {
   }
 });
 
-// // DELETE: /user/profile/{base64Email}
-// userRouter.delete('/profile/:base64Email', async (req, res, next) => {
-//   // TODO
-// });
+// DELETE: /user/profile/{base64Email}
+userRouter.delete('/profile/:base64Email', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Check Origin header or application key
+    if (
+      req.header('Origin') !== req.app.get('webpageOrigin') &&
+      !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
+    ) {
+      throw new ForbiddenError();
+    }
+
+    // Header check - access token
+    const accessToken = req.header('X-ACCESS-TOKEN');
+    if (accessToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    const tokenContents = verifyAccessToken(
+      accessToken,
+      req.app.get('jwtAccessKey')
+    );
+
+    // check request param
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64url'
+    ).toString('utf8');
+    if (!validateEmail(requestUserEmail)) {
+      throw new NotFoundError();
+    }
+    if (tokenContents.id !== requestUserEmail) {
+      throw new ForbiddenError();
+    }
+
+    // check request body
+    const DeleteAcountRequest: {otpRequestId: string} = req.body;
+    if (!validateDeleteAcountRequest(DeleteAcountRequest)) {
+      throw new BadRequestError();
+    }
+
+    // verify OTP request
+    const otpRequest = await verifyOTPRequest(
+      DeleteAcountRequest.otpRequestId,
+      req
+    );
+
+    // TODO: don't we need to check verified and email as well?
+    // checked verified, expired, and email
+    if (
+      !otpRequest.verified ||
+      !otpRequest.expireAt ||
+      otpRequest.expireAt < new Date().toISOString() ||
+      otpRequest.email !== requestUserEmail
+    ) {
+      throw new ConflictError();
+    }
+
+    // TODO: don't we need to check if the user is already deleted?
+    // DB operation - check if user is already deleted and delete user
+    if ((await User.read(dbClient, requestUserEmail)).deleted) {
+      throw new ConflictError();
+    }
+    await User.delete(dbClient, requestUserEmail);
+
+    // Send response - 200: Response Header cookie set
+    res.clearCookie('X-ACCESS-TOKEN', {httpOnly: true, maxAge: 0});
+    res.clearCookie('X-REFRESH-TOKEN', {httpOnly: true, maxAge: 0});
+    res.status(200).send();
+  } catch (e) {
+    next(e);
+  }
+});
 
 // // PATCH: /user/profile/{base64Email}
 // userRouter.patch('/profile/:base64Email', async (req, res, next) => {
