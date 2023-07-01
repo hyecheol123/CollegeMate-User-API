@@ -27,8 +27,7 @@ export default async function verifyOTPRequest(
     }
   );
 
-  // TODO: WHY NOT 403?
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     // Retry with new serverAdminToken
     response = await fetch('https://api.collegemate.app/auth/login', {
       method: 'GET',
@@ -49,13 +48,8 @@ export default async function verifyOTPRequest(
     );
   }
 
-  if (response.status === 404) {
-    // Requested OTP request ID not found
-    throw new NotFoundError();
-  }
-
   if (response.status !== 200) {
-    throw new Error('[Fail on checking OTP Request Status]');
+    throw new Error('[Fail on checking OTP Request Verification Status]');
   }
 
   // OTP Request found

@@ -150,22 +150,25 @@ userRouter.delete('/profile/:base64Email', async (req, res, next) => {
       req
     );
 
-    // TODO: don't we need to check verified and email as well?
-    // checked verified, expired, and email
+    // check if OTP is verified and email matches
+    if (!otpRequest.verified || otpRequest.email !== requestUserEmail) {
+      throw new ForbiddenError();
+    }
+
+    // check if OTP is expired or does not have expireAt
     if (
-      !otpRequest.verified ||
       !otpRequest.expireAt ||
-      otpRequest.expireAt < new Date().toISOString() ||
-      otpRequest.email !== requestUserEmail
+      otpRequest.expireAt < new Date().toISOString()
     ) {
       throw new ConflictError();
     }
 
-    // TODO: don't we need to check if the user is already deleted?
-    // DB operation - check if user is already deleted and delete user
-    if ((await User.read(dbClient, requestUserEmail)).deleted) {
+    // DB operation - check if user is already deleted or locked
+    const user = await User.read(dbClient, requestUserEmail);
+    if (user.deleted || user.locked) {
       throw new ConflictError();
     }
+    // DB operation - delete user
     await User.delete(dbClient, requestUserEmail);
 
     // Send response - 200: Response Header cookie set
