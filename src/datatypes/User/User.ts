@@ -266,9 +266,7 @@ export default class User {
     const dbOps = await dbClient
       .container(USER)
       .item(id)
-      .patch([
-        {op: 'set', path: '/lastLogin', value: lastLogin},
-      ]);
+      .patch([{op: 'set', path: '/lastLogin', value: lastLogin}]);
 
     if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
       throw new NotFoundError();

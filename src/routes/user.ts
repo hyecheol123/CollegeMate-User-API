@@ -23,7 +23,7 @@ import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
-import { validateLastLoginRequest } from '../functions/inputValidator/validateLastLoginRequest';
+import {validateLastLoginRequest} from '../functions/inputValidator/validateLastLoginRequest';
 
 // Path: /user
 const userRouter = express.Router();
@@ -215,9 +215,12 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
     if (serverToken === undefined) {
       throw new UnauthenticatedError();
     }
-    const tokenContents = verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
+    const tokenContents = verifyServerAdminToken(
+      serverToken,
+      req.app.get('jwtAccessKey')
+    );
     // Check if token is from authentication server
-    if(tokenContents.accountType === 'server - authentication') {
+    if (tokenContents.accountType === 'server - authentication') {
       throw new ForbiddenError();
     }
 
@@ -226,20 +229,26 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
       req.params.base64Email,
       'base64url'
     ).toString('utf8');
-    
+
     if (!validateEmail(requestUserEmail)) {
       throw new NotFoundError();
     }
 
     // Check request body
-    const lastLoginRequest: { lastLogin: string } = req.body;
+    const lastLoginRequest: {lastLogin: string} = req.body;
     if (!validateLastLoginRequest(lastLoginRequest)) {
       throw new BadRequestError();
     }
-    lastLoginRequest.lastLogin = (new Date(lastLoginRequest.lastLogin)).toISOString();
+    lastLoginRequest.lastLogin = new Date(
+      lastLoginRequest.lastLogin
+    ).toISOString();
 
     // update User lastLogin with requested email
-    await User.updateLastLogin(dbClient, requestUserEmail, lastLoginRequest.lastLogin);
+    await User.updateLastLogin(
+      dbClient,
+      requestUserEmail,
+      lastLoginRequest.lastLogin
+    );
 
     // response
     res.status(200).send();
