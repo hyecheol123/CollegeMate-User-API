@@ -215,8 +215,11 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
     if (serverToken === undefined) {
       throw new UnauthenticatedError();
     }
-    verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
-    // TODO: check if call is from auth
+    const tokenContents = verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
+    // Check if token is from authentication server
+    if(tokenContents.accountType === 'server - authentication') {
+      throw new ForbiddenError();
+    }
 
     // Check parameter
     const requestUserEmail = Buffer.from(
