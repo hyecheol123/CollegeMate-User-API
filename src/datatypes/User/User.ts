@@ -261,6 +261,9 @@ export default class User {
     await dbClient
       .container(USER)
       .item(email)
-      .patch([{op: 'set', path: '/deleted', value: true},
-        {op: 'set', path: '/deletedAt', value: new Date().toISOString()}]);
+      .patch([
+        {op: 'set', path: '/deleted', value: true},
+        {op: 'set', path: '/deletedAt', value: new Date().toISOString()},
+      ]);
+  }
 }
