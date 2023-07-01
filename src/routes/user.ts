@@ -222,7 +222,15 @@ userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
     }
     verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
 
-    const requestUserEmail = req.params.base64Email;
+    // Check oarameter
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64url'
+    ).toString('utf8');
+    
+    if (!validateEmail(requestUserEmail)) {
+      throw new NotFoundError();
+    }
 
     // Check request body
     const lockUserRequest: { description: string } = req.body;
