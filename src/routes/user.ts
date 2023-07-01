@@ -232,7 +232,7 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
     }
 
     // Check request body
-    const lastLoginRequest: { description: string } = req.body;
+    const lastLoginRequest: { lastLogin: string } = req.body;
     if (!validateLastLoginRequest(lastLoginRequest)) {
       throw new BadRequestError();
     }

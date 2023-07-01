@@ -254,15 +254,15 @@ export default class User {
    * Update lastLogin field of user with date-time provided
    *
    * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
-   * @param {string} id id of the user to lock
-   * @param {string} lastLogin description of the lock
+   * @param {string} id id of the user
+   * @param {string} lastLogin lastLogin date
    */
   static async updateLastLogin(
     dbClient: Cosmos.Database,
     id: string,
     lastLogin: string
   ): Promise<void> {
-    // Query that locks the user
+    // Update last login field
     const dbOps = await dbClient
       .container(USER)
       .item(id)
