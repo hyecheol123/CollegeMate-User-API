@@ -24,6 +24,7 @@ import {validateUserPostRequest} from '../functions/inputValidator/validateUserP
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
 import {validateUserUpdateRequest} from '../functions/inputValidator/validateUserUpdateRequest';
+import IUserUpdateObj from '../datatypes/User/IUserUpdateObj';
 
 // Path: /user
 const userRouter = express.Router();
@@ -153,9 +154,45 @@ userRouter.patch('/profile/:base64Email', async (req, res, next) => {
     }
 
     // check if user nickname has changed in 30 days
-    if(userUpdateRequest.nickname !== undefined) {
-      
+    if (userUpdateRequest.nickname !== undefined) {
+      const user = await User.read(dbClient, requestUserEmail);
+      const lastNicknameChanged = new Date(user.nicknameChanged);
+      // date difference in days
+      const dateDifference =
+        (new Date().getTime() - lastNicknameChanged.getTime()) /
+        (1000 * 3600 * 24);
+
+      if (dateDifference < 30) {
+        throw new BadRequestError();
+      } else {
+        // DB operation - check nickname availability
+        const available = await User.readCheckNickname(
+          dbClient,
+          userUpdateRequest.nickname
+        );
+        if (!available) {
+          throw new BadRequestError();
+        }
+      }
     }
+
+    // DB operation - update user
+    const updateObj: IUserUpdateObj = {};
+    if (userUpdateRequest.nickname !== undefined) {
+      updateObj.nickname = userUpdateRequest.nickname;
+    }
+    if (userUpdateRequest.major !== undefined) {
+      updateObj.major = userUpdateRequest.major;
+    }
+    if (userUpdateRequest.graduationYear !== undefined) {
+      updateObj.graduationYear = userUpdateRequest.graduationYear;
+    }
+
+    await User.update(
+      dbClient,
+      requestUserEmail,
+      updateObj,
+    );
 
     res.status(200).send();
   } catch (e) {

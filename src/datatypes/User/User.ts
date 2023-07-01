@@ -6,6 +6,7 @@
  */
 import * as Cosmos from '@azure/cosmos';
 import NotFoundError from '../../exceptions/NotFoundError';
+import IUserUpdateObj from './IUserUpdateObj';
 
 const USER = 'user';
 
@@ -247,6 +248,54 @@ export default class User {
         result.resource.lockedDescription as string,
         new Date(result.resource.lockedAt as string)
       );
+    }
+  }
+
+  /**
+   * Update user with description provided
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} id id of the user to lock
+   * @param {IUserUpdateObj} updateObj object that contains update information
+   */
+  static async update(
+    dbClient: Cosmos.Database,
+    id: string,
+    updateObj: IUserUpdateObj
+  ): Promise<void> {
+    const updateOps: Cosmos.PatchOperation[] = [];
+    if (updateObj.nickname !== undefined) {
+      updateOps.push({
+        op: 'set',
+        path: '/nickname',
+        value: updateObj.nickname,
+      });
+      updateOps.push({
+        op: 'set',
+        path: '/nicknameChanged',
+        value: new Date().toISOString(),
+      });
+    }
+    if (updateObj.major !== undefined) {
+      updateOps.push({
+        op: 'set',
+        path: '/major',
+        value: updateObj.major,
+      });
+    }
+    if (updateObj.graduationYear !== undefined) {
+      updateOps.push({
+        op: 'set',
+        path: '/graduationYear',
+        value: updateObj.graduationYear,
+      });
+    }
+
+    // Query that locks the user
+    const dbOps = await dbClient.container(USER).item(id).patch(updateOps);
+
+    if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
+      throw new NotFoundError();
     }
   }
 }
