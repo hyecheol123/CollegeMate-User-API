@@ -236,6 +236,7 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
     if (!validateLastLoginRequest(lastLoginRequest)) {
       throw new BadRequestError();
     }
+    lastLoginRequest.lastLogin = (new Date(lastLoginRequest.lastLogin)).toISOString();
 
     // update User lastLogin with requested email
     await User.updateLastLogin(dbClient, requestUserEmail, lastLoginRequest.lastLogin);
