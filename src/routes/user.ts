@@ -215,14 +215,14 @@ userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
   const dbClient: Cosmos.Database = req.app.locals.dbClient;
 
   try {
-    // Header check - access token or Origin header or application key
+    // Header check - serverAdminToken
     const serverToken = req.header('X-SERVER-TOKEN');
     if (serverToken === undefined) {
       throw new UnauthenticatedError();
     }
     verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
 
-    // Check oarameter
+    // Check parameter
     const requestUserEmail = Buffer.from(
       req.params.base64Email,
       'base64url'
