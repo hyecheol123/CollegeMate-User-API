@@ -23,6 +23,7 @@ import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import {validateUserUpdateRequest} from '../functions/inputValidator/validateUserUpdateRequest';
 
 // Path: /user
 const userRouter = express.Router();
@@ -106,10 +107,61 @@ userRouter.post('/', async (req, res, next) => {
 //   // TODO
 // });
 
-// // PATCH: /user/profile/{base64Email}
-// userRouter.patch('/profile/:base64Email', async (req, res, next) => {
-//   // TODO
-// });
+// PATCH: /user/profile/{base64Email}
+userRouter.patch('/profile/:base64Email', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Check Origin header or application key
+    if (
+      req.header('Origin') !== req.app.get('webpageOrigin') &&
+      !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
+    ) {
+      throw new ForbiddenError();
+    }
+
+    // Header check - access token
+    const accessToken = req.header('X-ACCESS-TOKEN');
+    if (accessToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    const tokenContents = verifyAccessToken(
+      accessToken,
+      req.app.get('jwtAccessKey')
+    );
+
+    // Check request body
+    const userUpdateRequest: {
+      nickname?: string;
+      major?: string;
+      graduationYear?: number;
+    } = req.body;
+    if (!validateUserUpdateRequest(userUpdateRequest)) {
+      throw new BadRequestError();
+    }
+
+    // check request parameter
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64url'
+    ).toString('utf8');
+    if (!validateEmail(requestUserEmail)) {
+      throw new NotFoundError();
+    }
+    if (tokenContents.id !== requestUserEmail) {
+      throw new ForbiddenError();
+    }
+
+    // check if user nickname has changed in 30 days
+    if(userUpdateRequest.nickname !== undefined) {
+      
+    }
+
+    res.status(200).send();
+  } catch (e) {
+    next(e);
+  }
+});
 
 // GET: /user/profile/{base64Email}
 userRouter.get('/profile/:base64Email', async (req, res, next) => {
