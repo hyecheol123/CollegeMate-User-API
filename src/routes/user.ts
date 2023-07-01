@@ -23,6 +23,7 @@ import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import {validateTNCAcceptRequest} from '../functions/inputValidator/validateTNCAcceptRequest';
 
 // Path: /user
 const userRouter = express.Router();
@@ -199,10 +200,64 @@ userRouter.get('/profile/:base64Email', async (req, res, next) => {
   }
 });
 
-// // POST: /user/profile/{base64Email}/accepttnc
-// userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
-//   // TODO
-// });
+// POST: /user/profile/{base64Email}/accepttnc
+userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Check Origin header or application key
+    if (
+      req.header('Origin') !== req.app.get('webpageOrigin') &&
+      !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
+    ) {
+      throw new ForbiddenError();
+    }
+
+    // Header check - access token
+    const accessToken = req.header('X-ACCESS-TOKEN');
+    if (accessToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    const tokenContents = verifyAccessToken(
+      accessToken,
+      req.app.get('jwtAccessKey')
+    );
+
+    // Check request body
+    const TNCAcceptRequest: {tncVersion: string} = req.body;
+    if (!validateTNCAcceptRequest(TNCAcceptRequest)) {
+      throw new BadRequestError();
+    }
+
+    // check request parameter
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64url'
+    ).toString('utf8');
+    if (!validateEmail(requestUserEmail)) {
+      throw new NotFoundError();
+    }
+    if (tokenContents.id !== requestUserEmail) {
+      throw new ForbiddenError();
+    }
+
+    // Check if the TnC version is the latest
+    const latestTnCVersion = (await getTnC(req)).version;
+    if (!latestTnCVersion || latestTnCVersion !== TNCAcceptRequest.tncVersion) {
+      throw new ConflictError();
+    }
+
+    await User.updateTNC(
+      dbClient,
+      requestUserEmail,
+      TNCAcceptRequest.tncVersion
+    );
+
+    res.status(200).send();
+  } catch (e) {
+    next(e);
+  }
+});
 
 // // POST: /user/profile/{base64Email}/lastlogin
 // userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
