@@ -1,0 +1,52 @@
+/**
+ * Utility to send Lock Mail to given email address
+ *
+ * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
+ * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
+ */
+
+import {Client} from '@microsoft/microsoft-graph-client';
+import * as path from 'path';
+import * as ejs from 'ejs';
+
+/**
+ * Send security code to user's email
+ *
+ * @param {Client} msGraphClient Microsoft Graph API Client
+ * @param {Client} azureUserObjId Microsoft Azure User Object ID
+ *   (From Azure Active Directory)
+ * @param {string} senderEmail email address used to send the lock mail
+ * @param {string} replyEmail email address used to get reply from user
+ * @param {string} email email address to send the security code
+ * @param {string} description description of the lock
+ */
+export default async function sendLockMail(
+  msGraphClient: Client,
+  azureUserObjId: string,
+  senderEmail: string,
+  replyEmail: string,
+  email: string,
+  description: string
+): Promise<void> {
+  const sendMail = {
+    message: {
+      subject: 'CollegeMate - OTP Code',
+      body: {
+        contentType: 'HTML',
+        content: await ejs.renderFile(
+          path.join(__dirname, './sendLockMailTemplate.ejs'),
+          {email: email, description: description}
+        ),
+      },
+      bodyPreview: 'Lock Notice from CollegeMate',
+      from: {emailAddress: {address: senderEmail}},
+      replyTo: [{emailAddress: {address: replyEmail}}],
+      toRecipients: [{emailAddress: {address: email}}],
+    },
+    saveToSentItems: false,
+  };
+
+  await msGraphClient
+    .api(`https://graph.microsoft.com/v1.0/users/${azureUserObjId}/sendMail`)
+    .post(sendMail);
+}

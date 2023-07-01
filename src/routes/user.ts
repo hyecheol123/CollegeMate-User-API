@@ -7,7 +7,7 @@
 
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
-import { Buffer } from 'node:buffer';
+import {Buffer} from 'node:buffer';
 import User from '../datatypes/User/User';
 import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
 import getTnC from '../datatypes/TNC/getTnC';
@@ -19,11 +19,13 @@ import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import NotFoundError from '../exceptions/NotFoundError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
-import { validateLockUserRequest } from '../functions/inputValidator/validateLockUserRequest';
-import { validateEmail } from '../functions/inputValidator/validateEmail';
-import { validateUserPostRequest } from '../functions/inputValidator/validateUserPostProfileRequest';
-import { validateVerifyNicknameRequest } from '../functions/inputValidator/validateVerifyNicknameRequest';
+import {validateLockUserRequest} from '../functions/inputValidator/validateLockUserRequest';
+import {validateEmail} from '../functions/inputValidator/validateEmail';
+import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
+import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import sendLockMail from '../functions/utils/sendLockMail';
+import {Client} from '@microsoft/microsoft-graph-client';
 
 // Path: /user
 const userRouter = express.Router();
@@ -213,6 +215,7 @@ userRouter.get('/profile/:base64Email', async (req, res, next) => {
 // POST: /user/profile/{base64Email}/lock
 userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
   const dbClient: Cosmos.Database = req.app.locals.dbClient;
+  const msGraphClient: Client = req.app.locals.msGraphClient;
 
   try {
     // Header check - serverAdminToken
@@ -227,13 +230,13 @@ userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
       req.params.base64Email,
       'base64url'
     ).toString('utf8');
-    
+
     if (!validateEmail(requestUserEmail)) {
       throw new NotFoundError();
     }
 
     // Check request body
-    const lockUserRequest: { description: string } = req.body;
+    const lockUserRequest: {description: string} = req.body;
     if (!validateLockUserRequest(lockUserRequest)) {
       throw new BadRequestError();
     }
@@ -243,6 +246,16 @@ userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
       throw new ConflictError();
     }
     await User.lock(dbClient, requestUserEmail, lockUserRequest.description);
+
+    // Send Notice Email to user
+    await sendLockMail(
+      msGraphClient,
+      req.app.get('azureUserObjId'),
+      req.app.get('noReplyEmailAddress'),
+      req.app.get('mainEmailAddress'),
+      requestUserEmail,
+      lockUserRequest.description
+    );
 
     // response
     res.status(200).send();
@@ -272,7 +285,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
     verifyAccessToken(accessToken, req.app.get('jwtAccessKey'));
 
     // Check request body
-    const nicknameVerifyRequest: { nickname: string } = req.body;
+    const nicknameVerifyRequest: {nickname: string} = req.body;
     if (!validateVerifyNicknameRequest(nicknameVerifyRequest)) {
       throw new BadRequestError();
     }
@@ -283,7 +296,7 @@ userRouter.get('/check-nickname', async (req, res, next) => {
       nicknameVerifyRequest.nickname
     );
 
-    res.status(200).json({ isAvailable: available });
+    res.status(200).json({isAvailable: available});
   } catch (e) {
     next(e);
   }

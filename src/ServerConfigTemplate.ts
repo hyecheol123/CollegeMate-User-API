@@ -8,6 +8,7 @@
 
 import {BinaryLike} from 'crypto';
 import {
+  AzureAppRegistrationObj,
   ConfigObj,
   DbObj,
   JwtKeyObj,
@@ -27,6 +28,7 @@ export default abstract class ServerConfigTemplate {
   readonly webpageOrigin: string;
   readonly serverApplicationKey: string;
   readonly serverAdminKey: string;
+  readonly azureAppRegistrationInfo: AzureAppRegistrationObj;
 
   /**
    * Constructor for ServerConfig Object
@@ -42,6 +44,7 @@ export default abstract class ServerConfigTemplate {
     this.webpageOrigin = config.webpageOrigin;
     this.serverApplicationKey = config.serverApplicationKey;
     this.serverAdminKey = config.serverAdminKey;
+    this.azureAppRegistrationInfo = config.azureAppRegistrationInfo;
   }
 
   /**

@@ -95,6 +95,8 @@ export default class ExpressServer {
 
   // TODO: Asyncronously set serverAdminToken
 
+  // TODO: Azure App Registration
+
   /**
    * CLose Server
    * - Close connection with Database server gracefully
