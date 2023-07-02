@@ -222,12 +222,30 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
     expect(response.status).toBe(200);
     expect(response.body.isAvailable).toBe(false);
 
+    // Case Insensitive check from Web
+    response = await request(testEnv.expressServer.app)
+      .get('/user/check-nickname')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({Origin: 'https://collegemate.app'})
+      .send({nickname: 'DRaG'});
+    expect(response.status).toBe(200);
+    expect(response.body.isAvailable).toBe(false);
+
     // Request From App
     response = await request(testEnv.expressServer.app)
       .get('/user/check-nickname')
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send({nickname: 'steve'});
+    expect(response.status).toBe(200);
+    expect(response.body.isAvailable).toBe(false);
+
+    // Case Insensitive check from App
+    response = await request(testEnv.expressServer.app)
+      .get('/user/check-nickname')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
+      .send({nickname: 'StevE'});
     expect(response.status).toBe(200);
     expect(response.body.isAvailable).toBe(false);
 
@@ -251,6 +269,15 @@ describe('GET /user/check-nickname - Verify Nickname', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({Origin: 'https://collegemate.app'})
       .send({nickname: 'deleted'});
+    expect(response.status).toBe(200);
+    expect(response.body.isAvailable).toBe(true);
+
+    // Case Insensitive check
+    response = await request(testEnv.expressServer.app)
+      .get('/user/check-nickname')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({Origin: 'https://collegemate.app'})
+      .send({nickname: 'DelEtEd'});
     expect(response.status).toBe(200);
     expect(response.body.isAvailable).toBe(true);
 
