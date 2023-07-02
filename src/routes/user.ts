@@ -166,8 +166,9 @@ userRouter.delete('/profile/:base64Email', async (req, res, next) => {
     // DB operation - check if user is already deleted or locked
     const user = await User.read(dbClient, requestUserEmail);
     if (user.deleted || user.locked) {
-      throw new ConflictError();
+      throw new ForbiddenError();
     }
+
     // DB operation - delete user
     await User.delete(dbClient, requestUserEmail);
 

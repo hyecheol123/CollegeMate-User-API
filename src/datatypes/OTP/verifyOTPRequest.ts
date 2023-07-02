@@ -6,7 +6,6 @@
 
 import {Request} from 'express';
 import OTP from '../OTP/OTP';
-import NotFoundError from '../../exceptions/NotFoundError';
 
 /**
  * Function to verify OTP Request from Authentication API
