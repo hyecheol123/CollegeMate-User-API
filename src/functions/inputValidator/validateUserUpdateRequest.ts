@@ -6,8 +6,11 @@
 
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import addKeywords from 'ajv-keywords';
 
-export const validateUserUpdateRequest = addFormats(new Ajv()).compile({
+export const validateUserUpdateRequest = addKeywords(
+  addFormats(new Ajv())
+).compile({
   type: 'object',
   properties: {
     nickname: {type: 'string'},

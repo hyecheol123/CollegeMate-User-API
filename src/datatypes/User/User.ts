@@ -264,6 +264,7 @@ export default class User {
     updateObj: IUserUpdateObj
   ): Promise<void> {
     const updateOps: Cosmos.PatchOperation[] = [];
+    const updateDate = new Date().toISOString();
     if (updateObj.nickname !== undefined) {
       updateOps.push({
         op: 'set',
@@ -272,8 +273,13 @@ export default class User {
       });
       updateOps.push({
         op: 'set',
+        path: '/searchTerm',
+        value: updateObj.nickname.toUpperCase(),
+      });
+      updateOps.push({
+        op: 'set',
         path: '/nicknameChanged',
-        value: new Date().toISOString(),
+        value: updateDate,
       });
     }
     if (updateObj.major !== undefined) {

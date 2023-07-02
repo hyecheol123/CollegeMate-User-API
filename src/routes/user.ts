@@ -25,6 +25,7 @@ import {validateVerifyNicknameRequest} from '../functions/inputValidator/validat
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
 import {validateUserUpdateRequest} from '../functions/inputValidator/validateUserUpdateRequest';
 import IUserUpdateObj from '../datatypes/User/IUserUpdateObj';
+import getMajorList from '../datatypes/MajorList/getMajorList';
 
 // Path: /user
 const userRouter = express.Router();
@@ -132,11 +133,7 @@ userRouter.patch('/profile/:base64Email', async (req, res, next) => {
     );
 
     // Check request body
-    const userUpdateRequest: {
-      nickname?: string;
-      major?: string;
-      graduationYear?: number;
-    } = req.body;
+    const userUpdateRequest: IUserUpdateObj = req.body;
     if (!validateUserUpdateRequest(userUpdateRequest)) {
       throw new BadRequestError();
     }
@@ -153,9 +150,21 @@ userRouter.patch('/profile/:base64Email', async (req, res, next) => {
       throw new ForbiddenError();
     }
 
+    // DB operation - if user is locked or deleted
     const user = await User.read(dbClient, requestUserEmail);
     if (user.locked || user.deleted) {
-      throw new ConflictError();
+      throw new ForbiddenError();
+    }
+
+    // delete unchanged properties
+    if (userUpdateRequest.nickname === user.nickname) {
+      delete userUpdateRequest.nickname;
+    }
+    if (userUpdateRequest.major === user.major) {
+      delete userUpdateRequest.major;
+    }
+    if (userUpdateRequest.graduationYear === user.graduationYear) {
+      delete userUpdateRequest.graduationYear;
     }
 
     // check if user nickname has changed in 30 days
@@ -175,24 +184,26 @@ userRouter.patch('/profile/:base64Email', async (req, res, next) => {
           userUpdateRequest.nickname
         );
         if (!available) {
-          throw new BadRequestError();
+          delete userUpdateRequest.nickname;
         }
       }
     }
 
-    // DB operation - update user
-    const updateObj: IUserUpdateObj = {};
-    if (userUpdateRequest.nickname !== undefined) {
-      updateObj.nickname = userUpdateRequest.nickname;
-    }
+    // check if requested major is valid
     if (userUpdateRequest.major !== undefined) {
-      updateObj.major = userUpdateRequest.major;
-    }
-    if (userUpdateRequest.graduationYear !== undefined) {
-      updateObj.graduationYear = userUpdateRequest.graduationYear;
+      // hard coded to wisc.edu for now
+      const major = await getMajorList(req, 'wisc.edu');
+      if (major.majorList.indexOf(userUpdateRequest.major) === -1) {
+        throw new BadRequestError();
+      }
     }
 
-    await User.update(dbClient, requestUserEmail, updateObj);
+    // if there is nothing to update, return 400
+    if (Object.keys(userUpdateRequest).length === 0) {
+      throw new BadRequestError();
+    }
+    // DB operation - update user
+    await User.update(dbClient, requestUserEmail, userUpdateRequest);
 
     res.status(200).send();
   } catch (e) {
