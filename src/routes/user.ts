@@ -155,7 +155,7 @@ userRouter.patch('/profile/:base64Email', async (req, res, next) => {
 
     const user = await User.read(dbClient, requestUserEmail);
     if (user.locked || user.deleted) {
-      throw new ForbiddenError();
+      throw new ConflictError();
     }
 
     // check if user nickname has changed in 30 days
