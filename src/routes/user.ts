@@ -252,10 +252,6 @@ userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
     if (!latestTnCVersion || latestTnCVersion !== TNCAcceptRequest.tncVersion) {
       throw new ConflictError();
     }
-    // Check if the user already accepted the latest TnC
-    if (user.tncVersion === TNCAcceptRequest.tncVersion) {
-      throw new ConflictError();
-    }
 
     await User.updateTNC(
       dbClient,
