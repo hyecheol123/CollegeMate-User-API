@@ -247,6 +247,12 @@ userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
       throw new ConflictError();
     }
 
+    // if user is locked or deleted, throw error
+    const user = await User.read(dbClient, requestUserEmail);
+    if (user.locked || user.deleted) {
+      throw new ConflictError();
+    }
+
     await User.updateTNC(
       dbClient,
       requestUserEmail,
