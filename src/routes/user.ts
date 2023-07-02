@@ -243,6 +243,11 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
       lastLoginRequest.lastLogin
     ).toISOString();
 
+    const user = await User.read(dbClient, requestUserEmail);
+    if (user.deleted || user.locked) {
+      throw new ConflictError();
+    }
+
     // update User lastLogin with requested email
     await User.updateLastLogin(
       dbClient,
