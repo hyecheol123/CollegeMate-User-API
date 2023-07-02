@@ -241,15 +241,19 @@ userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
       throw new ForbiddenError();
     }
 
+    // if user is locked or deleted, throw error
+    const user = await User.read(dbClient, requestUserEmail);
+    if (user.locked || user.deleted) {
+      throw new ConflictError();
+    }
+
     // Check if the TnC version is the latest
     const latestTnCVersion = (await getTnC(req)).version;
     if (!latestTnCVersion || latestTnCVersion !== TNCAcceptRequest.tncVersion) {
       throw new ConflictError();
     }
-
-    // if user is locked or deleted, throw error
-    const user = await User.read(dbClient, requestUserEmail);
-    if (user.locked || user.deleted) {
+    // Check if the user already accepted the latest TnC
+    if (user.tncVersion === TNCAcceptRequest.tncVersion) {
       throw new ConflictError();
     }
 
