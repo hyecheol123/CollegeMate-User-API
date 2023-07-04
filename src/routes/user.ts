@@ -8,10 +8,13 @@
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
 import {Buffer} from 'node:buffer';
+import AuthToken from '../datatypes/Token/AuthToken';
 import User from '../datatypes/User/User';
 import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
+import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import IUserUpdateObj from '../datatypes/User/IUserUpdateObj';
 import getTnC from '../datatypes/TNC/getTnC';
-import AuthToken from '../datatypes/Token/AuthToken';
+import getMajorList from '../datatypes/MajorList/getMajorList';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import ConflictError from '../exceptions/ConflictError';
@@ -22,10 +25,7 @@ import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
 import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
-import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
 import {validateUserUpdateRequest} from '../functions/inputValidator/validateUserUpdateRequest';
-import IUserUpdateObj from '../datatypes/User/IUserUpdateObj';
-import getMajorList from '../datatypes/MajorList/getMajorList';
 
 // Path: /user
 const userRouter = express.Router();
@@ -81,6 +81,13 @@ userRouter.post('/', async (req, res, next) => {
     );
     if (!available) {
       throw new BadRequestError();
+    }
+
+    // API call - verify major
+    // TODO: Hard Coded to Wisc.edu for now
+    const majorList = await getMajorList(req, 'wisc.edu');
+    if (!majorList.majorList.includes(userPostRequestObj.major)) {
+      throw new ConflictError();
     }
 
     // DB operation - create user
