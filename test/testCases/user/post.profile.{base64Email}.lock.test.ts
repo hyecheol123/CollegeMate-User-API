@@ -8,16 +8,18 @@
 import * as request from 'supertest';
 import * as jwt from 'jsonwebtoken';
 import * as Cosmos from '@azure/cosmos';
+import {Buffer} from 'node:buffer';
 import TestEnv from '../../TestEnv';
 import ExpressServer from '../../../src/ExpressServer';
-import User from '../../../src/datatypes/User/User';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
 
 describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
   let testEnv: TestEnv;
-  const userMap = {
-    steve: {} as User,
-    locked: {} as User,
+  const accessTokenMap = {
+    accessToken: '',
+    wrongKey: '',
+    missingAccountType: '',
+    valid: '',
   };
 
   beforeEach(async () => {
@@ -27,46 +29,59 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     // Start Test Environment
     await testEnv.start();
 
-    testEnv.expressServer = testEnv.expressServer as ExpressServer;
-    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
-
-    // Enter Test Data into Database
-    // Create Users
-    let user = new User(
-      'steve@wisc.edu',
-      'steve',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      false,
-      undefined,
-      undefined,
-      'Computer Science',
-      2024,
-      '1.0.0'
+    let tokenContent: AuthToken = {
+      id: 'existing@wisc.edu',
+      type: 'access',
+      tokenType: 'user',
+    };
+    accessTokenMap.accessToken = jwt.sign(
+      tokenContent,
+      testEnv.testConfig.jwt.secretKey,
+      {
+        algorithm: 'HS512',
+        expiresIn: '60m',
+      }
     );
-    await testEnv.dbClient.container('user').items.create(user);
-    userMap.steve = user;
 
-    user = new User(
-      'locked@wisc.edu',
-      'locked',
-      new Date().toISOString(),
-      new Date().toISOString(),
-      new Date().toISOString(),
-      false,
-      undefined,
-      true,
-      'Posted unauthorized advertisement to course evaluation',
-      new Date().toISOString(),
-      'Computer Science',
-      2024,
-      '1.0.0'
+    tokenContent = {
+      id: 'testAdmin',
+      type: 'access',
+      tokenType: 'serverAdmin',
+      accountType: 'admin',
+    };
+    accessTokenMap.wrongKey = jwt.sign(tokenContent, 'wrong key', {
+      algorithm: 'HS512',
+      expiresIn: '60m',
+    });
+
+    tokenContent = {
+      id: 'testAdmin',
+      type: 'access',
+      tokenType: 'serverAdmin',
+    };
+    accessTokenMap.missingAccountType = jwt.sign(
+      tokenContent,
+      testEnv.testConfig.jwt.secretKey,
+      {
+        algorithm: 'HS512',
+        expiresIn: '60m',
+      }
     );
-    await testEnv.dbClient.container('user').items.create(user);
-    userMap.locked = user;
+
+    tokenContent = {
+      id: 'testAdmin',
+      type: 'access',
+      tokenType: 'serverAdmin',
+      accountType: 'admin',
+    };
+    accessTokenMap.valid = jwt.sign(
+      tokenContent,
+      testEnv.testConfig.jwt.secretKey,
+      {
+        algorithm: 'HS512',
+        expiresIn: '10m',
+      }
+    );
   });
 
   afterEach(async () => {
@@ -77,15 +92,17 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
     // Request without any token
-    let response = await request(testEnv.expressServer.app).post(
-      `/user/profile/${userMap.steve.id}/lock`
+    const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
+      'base64url'
     );
+    let response = await request(testEnv.expressServer.app)
+    .post(`/user/profile/${encodedEmail}/lock`);
     expect(response.status).toBe(401);
     expect(response.body.error).toBe('Unauthenticated');
 
     // Request without X-Server-Token
     response = await request(testEnv.expressServer.app)
-      .post(`/user/profile/${userMap.steve.id}/lock`)
+      .post(`/user/profile/${encodedEmail}/lock`)
       .set({'X-OTHER-TOKEN': '<Some-Other-Value>'})
       .set({Origin: 'https://collegemate.app'});
     expect(response.status).toBe(401);
@@ -95,59 +112,27 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
   test('Fail - Request with invalid ServerAdminToken', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
-    // Provide accessToken of user as ServerAdminToken
-    // Generate token
-    let tokenContent: AuthToken = {
-      id: 'existing@wisc.edu',
-      type: 'access',
-      tokenType: 'user',
-    };
-    let token = jwt.sign(tokenContent, testEnv.testConfig.jwt.secretKey, {
-      algorithm: 'HS512',
-      expiresIn: '60m',
-    });
     // Request
+    const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
     let response = await request(testEnv.expressServer.app)
-      .post(`/user/profile/${userMap.steve.id}/lock`)
-      .set({'X-SERVER-TOKEN': token});
+      .post(`/user/profile/${encodedEmail}}/lock`)
+      .set({'X-SERVER-TOKEN': accessTokenMap.accessToken});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
-    // Provide serverAdminToken that signed with wrong key
-    // Generate Token
-    tokenContent = {
-      id: 'testAdmin',
-      type: 'access',
-      tokenType: 'serverAdmin',
-      accountType: 'admin',
-    };
-    token = jwt.sign(tokenContent, 'wrong key', {
-      algorithm: 'HS512',
-      expiresIn: '60m',
-    });
-
     // Request
     response = await request(testEnv.expressServer.app)
-      .post(`/user/profile/${userMap.steve.id}/lock`)
-      .set({'X-SERVER-TOKEN': token});
+      .post(`/user/profile/${encodedEmail}/lock`)
+      .set({'X-SERVER-TOKEN': accessTokenMap.wrongKey});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
-    // Missing Account Type
-    // Generate Token
-    tokenContent = {
-      id: 'testAdmin',
-      type: 'access',
-      tokenType: 'serverAdmin',
-    };
-    token = jwt.sign(tokenContent, testEnv.testConfig.jwt.secretKey, {
-      algorithm: 'HS512',
-      expiresIn: '60m',
-    });
     // Request
     response = await request(testEnv.expressServer.app)
-      .post(`/user/profile/${userMap.steve.id}/lock`)
-      .set({'X-SERVER-TOKEN': token});
+      .post(`/user/profile/${encodedEmail}/lock`)
+      .set({'X-SERVER-TOKEN': accessTokenMap.missingAccountType});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
   });
@@ -167,12 +152,15 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
       expiresIn: '1ms',
     });
 
-    // Wait for 10 ms
+    // Wait for 20 ms
     await new Promise(resolve => setTimeout(resolve, 10));
 
     // Request
+    const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
     const response = await request(testEnv.expressServer.app)
-      .post(`/user/profile/${userMap.steve.id}/lock`)
+      .post(`/user/profile/${encodedEmail}/lock`)
       .set({'X-SERVER-TOKEN': token});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
@@ -181,22 +169,13 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
   test('Fail - Not existing id', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
-    // Generate token
-    const tokenContent: AuthToken = {
-      id: 'testAdmin',
-      type: 'access',
-      tokenType: 'serverAdmin',
-      accountType: 'admin',
-    };
-    const token = jwt.sign(tokenContent, testEnv.testConfig.jwt.secretKey, {
-      algorithm: 'HS512',
-      expiresIn: '10m',
-    });
-
     // Request
+    const invalidEmail = Buffer.from('doesnotExist@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
     const response = await request(testEnv.expressServer.app)
-      .post('/user/profile/doesNotExist@wisc.edu/lock')
-      .set({'X-SERVER-TOKEN': token})
+      .post(`/user/profile/${invalidEmail}/lock`)
+      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
       .send({
         description: 'Posted unauthorized advertisement to course evaluation',
       });
@@ -207,22 +186,13 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
   test('Fail - Bad Request', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
-    // Generate token
-    const tokenContent: AuthToken = {
-      id: 'testAdmin',
-      type: 'access',
-      tokenType: 'serverAdmin',
-      accountType: 'admin',
-    };
-    const token = jwt.sign(tokenContent, testEnv.testConfig.jwt.secretKey, {
-      algorithm: 'HS512',
-      expiresIn: '10m',
-    });
-
     // Request with invalid request body
+    const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
     const response = await request(testEnv.expressServer.app)
-      .post(`/user/profile/${userMap.steve.id}/lock`)
-      .set({'X-SERVER-TOKEN': token})
+      .post(`/user/profile/${encodedEmail}/lock`)
+      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
       .send({invalidProperty: 'invalidValue'});
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Bad Request');
@@ -231,22 +201,13 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
   test('Fail - User Already Locked', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
-    // Generate token
-    const tokenContent: AuthToken = {
-      id: 'testAdmin',
-      type: 'access',
-      tokenType: 'serverAdmin',
-      accountType: 'admin',
-    };
-    const token = jwt.sign(tokenContent, testEnv.testConfig.jwt.secretKey, {
-      algorithm: 'HS512',
-      expiresIn: '10m',
-    });
-
     // Request
+    const lockedEmail = Buffer.from('locked@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
     const response = await request(testEnv.expressServer.app)
-      .post(`/user/profile/${userMap.locked.id}/lock`)
-      .set({'X-SERVER-TOKEN': token})
+      .post(`/user/profile/${lockedEmail}/lock`)
+      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
       .send({
         description: 'Posted unauthorized advertisement to course evaluation',
       });
@@ -257,22 +218,13 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
   test('Success - Lock User', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
-    // Generate token
-    const tokenContent: AuthToken = {
-      id: 'testAdmin',
-      type: 'access',
-      tokenType: 'serverAdmin',
-      accountType: 'admin',
-    };
-    const token = jwt.sign(tokenContent, testEnv.testConfig.jwt.secretKey, {
-      algorithm: 'HS512',
-      expiresIn: '10m',
-    });
-
     // Request to lock the user profile
+    const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
     const response = await request(testEnv.expressServer.app)
-      .post(`/user/profile/${userMap.steve.id}/lock`)
-      .set({'X-SERVER-TOKEN': token})
+      .post(`/user/profile/${encodedEmail}/lock`)
+      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
       .send({
         description: 'Posted unauthorized advertisement to course evaluation',
       });
