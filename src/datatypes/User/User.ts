@@ -12,6 +12,7 @@ const USER = 'user';
 export default class User {
   id: string;
   nickname: string;
+  searchTerm: string;
   lastLogin: Date | string;
   signUpDate: Date | string;
   nicknameChanged: Date | string;
@@ -113,6 +114,7 @@ export default class User {
   ) {
     this.id = id;
     this.nickname = nickname;
+    this.searchTerm = nickname.toUpperCase();
     this.lastLogin = lastLogin;
     this.signUpDate = signUpDate;
     this.nicknameChanged = nicknameChanged;
@@ -158,6 +160,8 @@ export default class User {
     dbClient: Cosmos.Database,
     nickname: string
   ): Promise<boolean> {
+    // Convert the nickname to uppercase for case-insensitive search
+    const searchTerm = nickname.toUpperCase();
     // Query that checks whether the nickname is already used or not
     return (
       (
@@ -165,10 +169,10 @@ export default class User {
           .container(USER)
           .items.query({
             query: String.prototype.concat(
-              `SELECT ${USER}.nickname FROM ${USER} `,
-              `WHERE ${USER}.deleted = false AND ${USER}.nickname = @nickname`
+              `SELECT ${USER}.searchTerm FROM ${USER} `,
+              `WHERE ${USER}.deleted = false AND ${USER}.searchTerm = @searchTerm`
             ),
-            parameters: [{name: '@nickname', value: nickname}],
+            parameters: [{name: '@searchTerm', value: searchTerm}],
           })
           .fetchAll()
       ).resources.length === 0

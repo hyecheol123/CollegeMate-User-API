@@ -23,6 +23,7 @@ import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import getMajorList from '../datatypes/MajorList/getMajorList';
 
 // Path: /user
 const userRouter = express.Router();
@@ -78,6 +79,13 @@ userRouter.post('/', async (req, res, next) => {
     );
     if (!available) {
       throw new BadRequestError();
+    }
+
+    // API call - verify major
+    // TODO: Hard Coded to Wisc.edu for now
+    const majorList = await getMajorList(req, 'wisc.edu');
+    if (!majorList.majorList.includes(userPostRequestObj.major)) {
+      throw new ConflictError();
     }
 
     // DB operation - create user
