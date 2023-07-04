@@ -2,6 +2,7 @@
  * Jest unit test for PATCH /user/profile/{base64id} method
  *
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
+ * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
  */
 
 // eslint-disable-next-line node/no-unpublished-import
@@ -255,7 +256,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     const wrongGraduation = {
       nickname: 'unique',
       major: 'Animal Science',
-      graduationYear: 2029,
+      graduationYear: '2025',
     };
     response = await request(testEnv.expressServer.app)
       .patch(`/user/profile/${encodedEmail}`)
@@ -424,11 +425,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     // nickname has been changed within 30 days
     const email = 'recent@wisc.edu';
     const encodedEmail = Buffer.from(email, 'utf8').toString('base64url');
-    const requestBody = {
-      nickname: 'unique',
-      major: 'Computer Science',
-      graduationYear: 2027,
-    };
+    const requestBody = {nickname: 'unique'};
     const response = await request(testEnv.expressServer.app)
       .patch(`/user/profile/${encodedEmail}`)
       .set({'X-ACCESS-TOKEN': accessTokenMap.recentNickname})
