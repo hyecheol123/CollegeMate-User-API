@@ -79,7 +79,7 @@ export default class TestEnv {
         ],
       },
       uniqueKeyPolicy: {
-        uniqueKeys: [{paths: ['/nickname']}],
+        uniqueKeys: [{paths: ['/nickname']}, {paths: ['/searchTerm']}],
       },
     });
     /* istanbul ignore next */
