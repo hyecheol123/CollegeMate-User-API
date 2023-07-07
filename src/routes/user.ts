@@ -8,10 +8,13 @@
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
 import {Buffer} from 'node:buffer';
+import AuthToken from '../datatypes/Token/AuthToken';
 import User from '../datatypes/User/User';
 import UserPostRequestObj from '../datatypes/User/UserPostRequestObj';
+import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
+import IUserUpdateObj from '../datatypes/User/IUserUpdateObj';
 import getTnC from '../datatypes/TNC/getTnC';
-import AuthToken from '../datatypes/Token/AuthToken';
+import getMajorList from '../datatypes/MajorList/getMajorList';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import ConflictError from '../exceptions/ConflictError';
@@ -22,8 +25,7 @@ import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
 import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
-import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
-import getMajorList from '../datatypes/MajorList/getMajorList';
+import {validateUserUpdateRequest} from '../functions/inputValidator/validateUserUpdateRequest';
 
 // Path: /user
 const userRouter = express.Router();
@@ -114,10 +116,107 @@ userRouter.post('/', async (req, res, next) => {
 //   // TODO
 // });
 
-// // PATCH: /user/profile/{base64Email}
-// userRouter.patch('/profile/:base64Email', async (req, res, next) => {
-//   // TODO
-// });
+// PATCH: /user/profile/{base64Email}
+userRouter.patch('/profile/:base64Email', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Check Origin header or application key
+    if (
+      req.header('Origin') !== req.app.get('webpageOrigin') &&
+      !req.app.get('applicationKey').includes(req.header('X-APPLICATION-KEY'))
+    ) {
+      throw new ForbiddenError();
+    }
+
+    // Header check - access token
+    const accessToken = req.header('X-ACCESS-TOKEN');
+    if (accessToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    const tokenContents = verifyAccessToken(
+      accessToken,
+      req.app.get('jwtAccessKey')
+    );
+
+    // Check request body
+    const userUpdateRequest: IUserUpdateObj = req.body;
+    if (!validateUserUpdateRequest(userUpdateRequest)) {
+      throw new BadRequestError();
+    }
+
+    // check request parameter
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64url'
+    ).toString('utf8');
+    if (!validateEmail(requestUserEmail)) {
+      throw new NotFoundError();
+    }
+    if (tokenContents.id !== requestUserEmail) {
+      throw new ForbiddenError();
+    }
+
+    // DB operation - if user is locked or deleted
+    const user = await User.read(dbClient, requestUserEmail);
+    if (user.locked || user.deleted) {
+      throw new ForbiddenError();
+    }
+
+    // delete unchanged properties
+    if (userUpdateRequest.nickname === user.nickname) {
+      delete userUpdateRequest.nickname;
+    }
+    if (userUpdateRequest.major === user.major) {
+      delete userUpdateRequest.major;
+    }
+    if (userUpdateRequest.graduationYear === user.graduationYear) {
+      delete userUpdateRequest.graduationYear;
+    }
+
+    // check if user nickname has changed in 30 days
+    if (userUpdateRequest.nickname !== undefined) {
+      const lastNicknameChanged = new Date(user.nicknameChanged);
+      // date difference in days
+      const dateDifference =
+        (new Date().getTime() - lastNicknameChanged.getTime()) /
+        (1000 * 3600 * 24);
+
+      if (dateDifference < 30) {
+        throw new BadRequestError();
+      } else {
+        // DB operation - check nickname availability
+        const available = await User.readCheckNickname(
+          dbClient,
+          userUpdateRequest.nickname
+        );
+        if (!available) {
+          throw new ConflictError();
+        }
+      }
+    }
+
+    // check if requested major is valid
+    if (userUpdateRequest.major !== undefined) {
+      // hard coded to wisc.edu for now
+      const major = await getMajorList(req, 'wisc.edu');
+      if (major.majorList.indexOf(userUpdateRequest.major) === -1) {
+        throw new BadRequestError();
+      }
+    }
+
+    // if there is nothing to update, return 400
+    if (Object.keys(userUpdateRequest).length === 0) {
+      throw new BadRequestError();
+    }
+    // DB operation - update user
+    await User.update(dbClient, requestUserEmail, userUpdateRequest);
+
+    res.status(200).send();
+  } catch (e) {
+    next(e);
+  }
+});
 
 // GET: /user/profile/{base64Email}
 userRouter.get('/profile/:base64Email', async (req, res, next) => {
