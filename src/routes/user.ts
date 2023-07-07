@@ -191,7 +191,7 @@ userRouter.patch('/profile/:base64Email', async (req, res, next) => {
           userUpdateRequest.nickname
         );
         if (!available) {
-          delete userUpdateRequest.nickname;
+          throw new ConflictError();
         }
       }
     }
