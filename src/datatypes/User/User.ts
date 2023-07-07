@@ -303,7 +303,7 @@ export default class User {
 
     // Query that locks the user
     const dbOps = await dbClient.container(USER).item(id).patch(updateOps);
-
+    // istanbul ignore if
     if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
       throw new NotFoundError();
     }

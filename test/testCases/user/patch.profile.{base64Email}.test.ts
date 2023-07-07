@@ -1,5 +1,5 @@
 /**
- * Jest unit test for PATCH /user/profile/{base64id} method
+ * Jest unit test for PATCH /user/profile/{base64Email} method
  *
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
@@ -15,7 +15,7 @@ import ExpressServer from '../../../src/ExpressServer';
 
 const USER = 'user';
 
-describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
+describe('PATCH /user/profile/{base64Email} - Update User Profile', () => {
   let testEnv: TestEnv;
   const accessTokenMap = {
     locked: '',
@@ -361,6 +361,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
 
   test('Fail - User Locked or Deleted', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
     // locked account check
     let email = 'locked@wisc.edu';
@@ -377,6 +378,17 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
       .send(requestBody);
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
+    // DB Check
+    let dbOps = await testEnv.dbClient.container(USER).item(email).read();
+    expect(dbOps.statusCode !== 404).toBe(true);
+    expect(dbOps.resource.id).toBe('locked@wisc.edu');
+    expect(dbOps.resource.nickname).toBe('locked');
+    expect(dbOps.resource.searchTerm).toBe('LOCKED');
+    expect(dbOps.resource.nicknameChanged).toBe(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(dbOps.resource.major).toBe('Computer Science');
+    expect(dbOps.resource.graduationYear).toBe(2024);
 
     // deleted account check
     email = 'deleted@wisc.edu';
@@ -388,6 +400,17 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
       .send(requestBody);
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
+    // DB Check
+    dbOps = await testEnv.dbClient.container(USER).item(email).read();
+    expect(dbOps.statusCode !== 404).toBe(true);
+    expect(dbOps.resource.id).toBe('deleted@wisc.edu');
+    expect(dbOps.resource.nickname).toBe('deleted');
+    expect(dbOps.resource.searchTerm).toBe('DELETED');
+    expect(dbOps.resource.nicknameChanged).toBe(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(dbOps.resource.major).toBe('Computer Science');
+    expect(dbOps.resource.graduationYear).toBe(2024);
 
     // locked and deleted account check
     email = 'locked-deleted@wisc.edu';
@@ -399,6 +422,17 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
       .send(requestBody);
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
+    // DB Check
+    dbOps = await testEnv.dbClient.container(USER).item(email).read();
+    expect(dbOps.statusCode !== 404).toBe(true);
+    expect(dbOps.resource.id).toBe('locked-deleted@wisc.edu');
+    expect(dbOps.resource.nickname).toBe('locked&Deleted');
+    expect(dbOps.resource.searchTerm).toBe('LOCKED&DELETED');
+    expect(dbOps.resource.nicknameChanged).toBe(
+      new Date('2022-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(dbOps.resource.major).toBe('Computer Science');
+    expect(dbOps.resource.graduationYear).toBe(2024);
   });
 
   test('Fail - Nickname has been Changed within 30 days', async () => {
@@ -412,6 +446,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     await testEnv.dbClient.container('user').items.create({
       id: 'recent@wisc.edu',
       nickname: 'recent',
+      searchTerm: 'RECENT',
       lastLogin: new Date().toISOString(),
       signUpDate: new Date().toISOString(),
       nicknameChanged: recentChange.toISOString(),
@@ -433,10 +468,21 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
       .send(requestBody);
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Bad Request');
+
+    // DB Check
+    const dbOps = await testEnv.dbClient.container(USER).item(email).read();
+    expect(dbOps.statusCode !== 404).toBe(true);
+    expect(dbOps.resource.id).toBe('recent@wisc.edu');
+    expect(dbOps.resource.nickname).toBe('recent');
+    expect(dbOps.resource.searchTerm).toBe('RECENT');
+    expect(dbOps.resource.nicknameChanged).toBe(recentChange.toISOString());
+    expect(dbOps.resource.major).toBe('Animal Science');
+    expect(dbOps.resource.graduationYear).toBe(2023);
   });
 
   test('Fail - Invalid Nickname (Duplicate)', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
     // nickname is duplicate
     const email = 'steve@wisc.edu';
@@ -451,8 +497,8 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.steve})
       .set({Origin: 'https://collegemate.app'})
       .send(requestbody);
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe('Bad Request');
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('Conflict');
 
     requestbody.nickname = 'locked';
     response = await request(testEnv.expressServer.app)
@@ -460,8 +506,20 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.steve})
       .set({Origin: 'https://collegemate.app'})
       .send(requestbody);
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe('Bad Request');
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('Conflict');
+
+    // DB Check
+    const dbOps = await testEnv.dbClient.container(USER).item(email).read();
+    expect(dbOps.statusCode !== 404).toBe(true);
+    expect(dbOps.resource.id).toBe('steve@wisc.edu');
+    expect(dbOps.resource.nickname).toBe('steve');
+    expect(dbOps.resource.searchTerm).toBe('STEVE');
+    expect(dbOps.resource.nicknameChanged).toBe(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(dbOps.resource.major).toBe('Computer Science');
+    expect(dbOps.resource.graduationYear).toBe(2024);
   });
 
   test('Fail - Request Value does not Involve Changes', async () => {
@@ -510,6 +568,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
 
   test('Fail - Major does not Exist', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
     // Major does not exist
     const email = 'steve@wisc.edu';
@@ -526,6 +585,18 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
       .send(requestbody);
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Bad Request');
+
+    // DB Check
+    const dbOps = await testEnv.dbClient.container(USER).item(email).read();
+    expect(dbOps.statusCode !== 404).toBe(true);
+    expect(dbOps.resource.id).toBe('steve@wisc.edu');
+    expect(dbOps.resource.nickname).toBe('steve');
+    expect(dbOps.resource.searchTerm).toBe('STEVE');
+    expect(dbOps.resource.nicknameChanged).toBe(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(dbOps.resource.major).toBe('Computer Science');
+    expect(dbOps.resource.graduationYear).toBe(2024);
   });
 
   test('Success - Nickname Changed 31 days ago', async () => {
@@ -539,6 +610,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     await testEnv.dbClient.container('user').items.create({
       id: 'old@wisc.edu',
       nickname: 'old',
+      searchTerm: 'OLD',
       lastLogin: new Date().toISOString(),
       signUpDate: new Date().toISOString(),
       nicknameChanged: oldChange.toISOString(),
@@ -563,11 +635,13 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
       .set({Origin: 'https://collegemate.app'})
       .send(requestBody);
     expect(response.status).toBe(200);
+
     // Check DB to see if all requested fields are updated
     const dbOps = await testEnv.dbClient.container(USER).item(email).read();
     expect(dbOps.statusCode !== 404).toBe(true);
     expect(dbOps.resource.id).toBe('old@wisc.edu');
     expect(dbOps.resource.nickname).toBe('rare');
+    expect(dbOps.resource.searchTerm).toBe('RARE');
     expect(dbOps.resource.nicknameChanged).not.toBe(oldChange.toISOString());
     expect(dbOps.resource.major).toBe('Computer Science');
     expect(dbOps.resource.graduationYear).toBe(2027);
@@ -597,6 +671,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     expect(dbOps.statusCode !== 404).toBe(true);
     expect(dbOps.resource.id).toBe('steve@wisc.edu');
     expect(dbOps.resource.nickname).toBe('unique');
+    expect(dbOps.resource.searchTerm).toBe('UNIQUE');
     expect(dbOps.resource.nicknameChanged).not.toBe(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
@@ -618,11 +693,12 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
       .send(requestBody);
     expect(response.status).toBe(200);
 
-    // Check DB to see if  all requested fields are updated
+    // Check DB to see if all requested fields are updated
     dbOps = await testEnv.dbClient.container(USER).item(email).read();
     expect(dbOps.statusCode !== 404).toBe(true);
     expect(dbOps.resource.id).toBe('drag@wisc.edu');
     expect(dbOps.resource.nickname).toBe('different');
+    expect(dbOps.resource.searchTerm).toBe('DIFFERENT');
     expect(dbOps.resource.nicknameChanged).not.toBe(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
@@ -654,6 +730,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     expect(dbOps.resource.major).toBe('Animal Science');
     // other fields should not be changed
     expect(dbOps.resource.nickname).toBe('steve');
+    expect(dbOps.resource.searchTerm).toBe('STEVE');
     expect(dbOps.resource.nicknameChanged).toBe(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
@@ -680,6 +757,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     expect(dbOps.resource.major).toBe('Electrical Engineering');
     // other fields should not be changed
     expect(dbOps.resource.nickname).toBe('drag');
+    expect(dbOps.resource.searchTerm).toBe('DRAG');
     expect(dbOps.resource.nicknameChanged).toBe(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
@@ -711,6 +789,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     // other fields should not be changed
     expect(dbOps.resource.major).toBe('Computer Science');
     expect(dbOps.resource.nickname).toBe('steve');
+    expect(dbOps.resource.searchTerm).toBe('STEVE');
     expect(dbOps.resource.nicknameChanged).toBe(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
@@ -736,6 +815,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     // other fields should not be changed
     expect(dbOps.resource.major).toBe('Computer Science');
     expect(dbOps.resource.nickname).toBe('drag');
+    expect(dbOps.resource.searchTerm).toBe('DRAG');
     expect(dbOps.resource.nicknameChanged).toBe(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
@@ -763,6 +843,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     expect(dbOps.statusCode !== 404).toBe(true);
     expect(dbOps.resource.id).toBe('steve@wisc.edu');
     expect(dbOps.resource.nickname).toBe('unique');
+    expect(dbOps.resource.searchTerm).toBe('UNIQUE');
     expect(dbOps.resource.nicknameChanged).not.toBe(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
@@ -788,6 +869,7 @@ describe('PATCH /user/profile/{base64id} - Update User Profile', () => {
     expect(dbOps.statusCode !== 404).toBe(true);
     expect(dbOps.resource.id).toBe('drag@wisc.edu');
     expect(dbOps.resource.nickname).toBe('different');
+    expect(dbOps.resource.searchTerm).toBe('DIFFERENT');
     expect(dbOps.resource.nicknameChanged).not.toBe(
       new Date('2023-02-10T00:50:43.000Z').toISOString()
     );
