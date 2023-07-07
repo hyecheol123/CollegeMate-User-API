@@ -220,7 +220,7 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
       req.app.get('jwtAccessKey')
     );
     // Check if token is from authentication server
-    if (tokenContents.accountType === 'server - authentication') {
+    if (tokenContents.accountType !== 'server - authentication') {
       throw new ForbiddenError();
     }
 
