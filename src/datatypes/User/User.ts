@@ -332,4 +332,21 @@ export default class User {
       throw new NotFoundError();
     }
   }
+
+  /**
+   * Delete user - soft delete by changing the deleted flag to true
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} email email of the user
+   */
+  static async delete(dbClient: Cosmos.Database, email: string): Promise<void> {
+    // Query that soft deletes the user
+    await dbClient
+      .container(USER)
+      .item(email)
+      .patch([
+        {op: 'set', path: '/deleted', value: true},
+        {op: 'set', path: '/deletedAt', value: new Date().toISOString()},
+      ]);
+  }
 }
