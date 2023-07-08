@@ -15,7 +15,7 @@ import AuthToken from '../../../src/datatypes/Token/AuthToken';
 
 describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
   let testEnv: TestEnv;
-  const accessTokenMap = {
+  const serverTokenMap = {
     accessToken: '',
     wrongKey: '',
     missingAccountType: '',
@@ -29,12 +29,13 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     // Start Test Environment
     await testEnv.start();
 
+    // Access Token
     let tokenContent: AuthToken = {
       id: 'existing@wisc.edu',
       type: 'access',
       tokenType: 'user',
     };
-    accessTokenMap.accessToken = jwt.sign(
+    serverTokenMap.accessToken = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
       {
@@ -43,23 +44,25 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
       }
     );
 
+    // Wrong Token Key
     tokenContent = {
       id: 'testAdmin',
       type: 'access',
       tokenType: 'serverAdmin',
       accountType: 'admin',
     };
-    accessTokenMap.wrongKey = jwt.sign(tokenContent, 'wrong key', {
+    serverTokenMap.wrongKey = jwt.sign(tokenContent, 'wrong key', {
       algorithm: 'HS512',
       expiresIn: '60m',
     });
 
+    // Missing Account Type Token
     tokenContent = {
       id: 'testAdmin',
       type: 'access',
       tokenType: 'serverAdmin',
     };
-    accessTokenMap.missingAccountType = jwt.sign(
+    serverTokenMap.missingAccountType = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
       {
@@ -68,13 +71,14 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
       }
     );
 
+    // Valid ServerAdmin Token
     tokenContent = {
       id: 'testAdmin',
       type: 'access',
       tokenType: 'serverAdmin',
       accountType: 'admin',
     };
-    accessTokenMap.valid = jwt.sign(
+    serverTokenMap.valid = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
       {
@@ -95,8 +99,9 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
       'base64url'
     );
-    let response = await request(testEnv.expressServer.app)
-    .post(`/user/profile/${encodedEmail}/lock`);
+    let response = await request(testEnv.expressServer.app).post(
+      `/user/profile/${encodedEmail}/lock`
+    );
     expect(response.status).toBe(401);
     expect(response.body.error).toBe('Unauthenticated');
 
@@ -118,21 +123,21 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     );
     let response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}}/lock`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.accessToken});
+      .set({'X-SERVER-TOKEN': serverTokenMap.accessToken});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
     // Request
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lock`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.wrongKey});
+      .set({'X-SERVER-TOKEN': serverTokenMap.wrongKey});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
     // Request
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lock`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.missingAccountType});
+      .set({'X-SERVER-TOKEN': serverTokenMap.missingAccountType});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
   });
@@ -166,16 +171,17 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     expect(response.body.error).toBe('Forbidden');
   });
 
-  test('Fail - Not existing id', async () => {
+  test('Fail - Non-Existent Email', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
     // Request
-    const invalidEmail = Buffer.from('doesnotExist@wisc.edu', 'utf8').toString(
+    const invalidEmail = Buffer.from('invalidEmail@wisc.edu', 'utf8').toString(
       'base64url'
     );
     const response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${invalidEmail}/lock`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         description: 'Posted unauthorized advertisement to course evaluation',
       });
@@ -183,16 +189,35 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     expect(response.body.error).toBe('Not Found');
   });
 
-  test('Fail - Bad Request', async () => {
+  test('Fail - Invalid, Additional, or No Request Body', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
     // Request with invalid request body
     const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
       'base64url'
     );
-    const response = await request(testEnv.expressServer.app)
+    let response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lock`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({invalidProperty: 'invalidValue'});
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+
+    // Request with invalid request body
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lock`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({
+        description: 'Posted unauthorized advertisement to course evaluation',
+        invalidProperty: 'invalidValue',
+      });
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+
+    // Request with invalid request body
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lock`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({invalidProperty: 'invalidValue'});
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Bad Request');
@@ -207,7 +232,7 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     );
     const response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${lockedEmail}/lock`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         description: 'Posted unauthorized advertisement to course evaluation',
       });
@@ -215,8 +240,26 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     expect(response.body.error).toBe('Conflict');
   });
 
+  test('Fail - Wrong Email Format', async () => {
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+
+    // Request
+    const wrongEmail = Buffer.from('WrongEmailType', 'utf8').toString(
+      'base64url'
+    );
+    const response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${wrongEmail}/lock`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({
+        description: 'Posted unauthorized advertisement to course evaluation',
+      });
+    expect(response.status).toBe(404);
+    expect(response.body.error).toBe('Not Found');
+  });
+
   test('Success - Lock User', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
+    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
     // Request to lock the user profile
     const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
@@ -224,14 +267,21 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     );
     const response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lock`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         description: 'Posted unauthorized advertisement to course evaluation',
       });
     expect(response.status).toBe(200);
-    expect(response.body.locked).toBe(true);
-    expect(response.body.lockedDescription).toBe(
+
+    // check if it is updated in the database
+    const dbOps = await testEnv.dbClient
+      .container('user')
+      .item('steve@wisc.edu')
+      .read();
+    expect(dbOps.resource.locked).toBe(true);
+    expect(dbOps.resource.lockedDescription).toContain(
       'Posted unauthorized advertisement to course evaluation'
     );
+    expect(dbOps.resource).toHaveProperty('lockedAt');
   });
 });

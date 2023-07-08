@@ -18,8 +18,8 @@ jest.mock('../src/datatypes/TNC/getTnC', () => ({
   }),
 }));
 
-// Mocking Email Sending Module 
-jest.mock('../src/functions/utils/sendLockMail', () => ({ 
-  __esModule: true, 
-  default: jest.fn().mockImplementation(() => Promise.resolve()), 
+// Mocking Email Sending Module
+jest.mock('../src/functions/utils/sendLockMail', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => Promise.resolve()),
 }));
