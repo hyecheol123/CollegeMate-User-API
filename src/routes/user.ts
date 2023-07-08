@@ -15,6 +15,7 @@ import UserProfileResponseObj from '../datatypes/User/UserProfileResponseObj';
 import IUserUpdateObj from '../datatypes/User/IUserUpdateObj';
 import getTnC from '../datatypes/TNC/getTnC';
 import getMajorList from '../datatypes/MajorList/getMajorList';
+import getVerifyOTP from '../datatypes/OTP/getVerifyOTP';
 import ForbiddenError from '../exceptions/ForbiddenError';
 import BadRequestError from '../exceptions/BadRequestError';
 import ConflictError from '../exceptions/ConflictError';
@@ -22,7 +23,6 @@ import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import NotFoundError from '../exceptions/NotFoundError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
-import verifyOTPRequest from '../datatypes/OTP/verifyOTPRequest';
 import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
@@ -149,16 +149,13 @@ userRouter.delete('/profile/:base64Email', async (req, res, next) => {
     }
 
     // check request body
-    const DeleteAcountRequest: {otpRequestId: string} = req.body;
-    if (!validateDeleteAcountRequest(DeleteAcountRequest)) {
+    if (!validateDeleteAcountRequest(req.body)) {
       throw new BadRequestError();
     }
+    const {otpRequestId} = req.body;
 
     // verify OTP request
-    const otpRequest = await verifyOTPRequest(
-      DeleteAcountRequest.otpRequestId,
-      req
-    );
+    const otpRequest = await getVerifyOTP(otpRequestId, req);
 
     // check if OTP is verified and email matches
     if (

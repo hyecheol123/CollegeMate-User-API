@@ -1,23 +1,24 @@
 /**
  * Function to verify OTP Request from Authentication API
  *
+ * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 
 import {Request} from 'express';
-import OTP from '../OTP/OTP';
+import OTPResponse from './OTPResponse';
 
 /**
  * Function to verify OTP Request from Authentication API
  *
  * @param {string} requestID Request ID of OTP
  * @param {Request} req express Request object
- * @return {Promise<OTP>} OTP object
+ * @return {Promise<OTPResponse>} OTP object
  */
-export default async function verifyOTPRequest(
+export default async function getVerifyOTP(
   requestID: string,
   req: Request
-): Promise<OTP> {
+): Promise<OTPResponse> {
   let response = await fetch(
     `https://api.collegemate.app/auth/${requestID}/verify`,
     {
@@ -52,19 +53,13 @@ export default async function verifyOTPRequest(
   }
 
   // OTP Request found
-  const OTPRequestInfo = await response.json();
-  const OTPResponse: OTP = {
+  const OTPRequestInfo = (await response.json()) as OTPResponse;
+  return {
     email: OTPRequestInfo.email,
     purpose: OTPRequestInfo.purpose,
-    verified: false,
+    verified: OTPRequestInfo.verified,
+    expireAt: OTPRequestInfo.verified
+      ? new Date(OTPRequestInfo.expireAt as string)
+      : undefined,
   };
-
-  if (OTPRequestInfo.verified) {
-    OTPResponse.verified = true;
-    OTPResponse.expireAt = OTPRequestInfo.expireAt;
-  } else {
-    OTPResponse.verified = false;
-  }
-
-  return OTPResponse;
 }

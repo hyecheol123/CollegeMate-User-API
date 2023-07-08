@@ -5,7 +5,8 @@
  * @author Hyecheol (Jerry) Jang <hyecheol123@gmail.com>
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
-import OTP from '../src/datatypes/OTP/OTP';
+
+import OTPResponse from '../src/datatypes/OTP/OTPResponse';
 import NotFoundError from '../src/exceptions/NotFoundError';
 
 // TnC Mock Data
@@ -46,12 +47,12 @@ jest.mock('../src/datatypes/MajorList/getMajorList', () => ({
 }));
 
 // OTP Mock Data
-jest.mock('../src/datatypes/OTP/verifyOTPRequest', () => ({
+jest.mock('../src/datatypes/OTP/getVerifyOTP', () => ({
   __esModule: true,
   default: jest
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     .fn(async (requestID: string, _req: Request) => {
-      let returnValue: OTP;
+      let returnValue: OTPResponse;
       // 15 minutes from now
       const validExpireAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
       switch (requestID) {
