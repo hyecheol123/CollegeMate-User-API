@@ -1,7 +1,8 @@
 /**
- * Jest unit test for POST /user/profile/{base64id} method
+ * Jest unit test for POST /user/profile/{base64Email} method
  *
  * @author Jeonghyeon Park <fishbox0923@gmail.com>
+ * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 
 // eslint-disable-next-line node/no-unpublished-import
@@ -20,6 +21,7 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     wrongKey: '',
     missingAccountType: '',
     valid: '',
+    refresh: '',
   };
 
   beforeEach(async () => {
@@ -36,6 +38,21 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
       tokenType: 'user',
     };
     serverTokenMap.accessToken = jwt.sign(
+      tokenContent,
+      testEnv.testConfig.jwt.secretKey,
+      {
+        algorithm: 'HS512',
+        expiresIn: '60m',
+      }
+    );
+
+    // Refresh Token
+    tokenContent = {
+      id: 'testAdmin',
+      type: 'refresh',
+      tokenType: 'serverAdmin',
+    };
+    serverTokenMap.missingAccountType = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
       {
@@ -127,22 +144,29 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
-    // Request
+    // Request with serverAdminToken with wrong hashkey
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lock`)
       .set({'X-SERVER-TOKEN': serverTokenMap.wrongKey});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
-    // Request
+    // Request with serverAdminToken without accountType
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lock`)
       .set({'X-SERVER-TOKEN': serverTokenMap.missingAccountType});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
+
+    // Request with wrong type of token
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lock`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.refresh});
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
   });
 
-  test('Fail - ServerAdminToken expired', async () => {
+  test('Fail - Expired ServerAdminToken', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
     // Generate token
@@ -157,8 +181,8 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
       expiresIn: '1ms',
     });
 
-    // Wait for 20 ms
-    await new Promise(resolve => setTimeout(resolve, 10));
+    // Wait for 5 ms
+    await new Promise(resolve => setTimeout(resolve, 5));
 
     // Request
     const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
@@ -203,7 +227,7 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Bad Request');
 
-    // Request with invalid request body
+    // Request with additional request body
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lock`)
       .set({'X-SERVER-TOKEN': serverTokenMap.valid})
@@ -214,24 +238,36 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Bad Request');
 
-    // Request with invalid request body
+    // Request with no request body
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lock`)
-      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
-      .send({invalidProperty: 'invalidValue'});
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid});
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Bad Request');
   });
 
-  test('Fail - User Already Locked', async () => {
+  test('Fail - User Already Locked or Deleted', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
     // Request
     const lockedEmail = Buffer.from('locked@wisc.edu', 'utf8').toString(
       'base64url'
     );
-    const response = await request(testEnv.expressServer.app)
+    let response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${lockedEmail}/lock`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({
+        description: 'Posted unauthorized advertisement to course evaluation',
+      });
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('Conflict');
+
+    // Request
+    const deletedEmail = Buffer.from('deleted@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${deletedEmail}/lock`)
       .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         description: 'Posted unauthorized advertisement to course evaluation',
@@ -257,7 +293,7 @@ describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
     expect(response.body.error).toBe('Not Found');
   });
 
-  test('Success - Lock User', async () => {
+  test('Success', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
     testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
