@@ -79,7 +79,7 @@ export default class TestEnv {
         ],
       },
       uniqueKeyPolicy: {
-        uniqueKeys: [{paths: ['/nickname']}],
+        uniqueKeys: [{paths: ['/nickname']}, {paths: ['/searchTerm']}],
       },
     });
     /* istanbul ignore next */
@@ -93,6 +93,7 @@ export default class TestEnv {
       {
         id: 'steve@wisc.edu',
         nickname: 'steve',
+        searchTerm: 'STEVE',
         lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
         signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
         nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
@@ -105,6 +106,7 @@ export default class TestEnv {
       {
         id: 'drag@wisc.edu',
         nickname: 'drag',
+        searchTerm: 'DRAG',
         lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
         signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
         nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
@@ -117,6 +119,7 @@ export default class TestEnv {
       {
         id: 'deleted@wisc.edu',
         nickname: 'deleted',
+        searchTerm: 'DELETED',
         lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
         signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
         nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
@@ -130,6 +133,7 @@ export default class TestEnv {
       {
         id: 'locked@wisc.edu',
         nickname: 'locked',
+        searchTerm: 'LOCKED',
         lastLogin: new Date('2023-03-10T00:50:43.000Z').toISOString(),
         signUpDate: new Date('2023-02-10T00:50:43.000Z').toISOString(),
         nicknameChanged: new Date('2023-02-10T00:50:43.000Z').toISOString(),
@@ -144,6 +148,7 @@ export default class TestEnv {
       {
         id: 'locked-deleted@wisc.edu',
         nickname: 'locked&Deleted',
+        searchTerm: 'LOCKED&DELETED',
         lastLogin: new Date('2022-03-10T00:50:43.000Z').toISOString(),
         signUpDate: new Date('2022-02-10T00:50:43.000Z').toISOString(),
         nicknameChanged: new Date('2022-02-10T00:50:43.000Z').toISOString(),

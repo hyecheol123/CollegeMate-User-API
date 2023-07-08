@@ -21,6 +21,30 @@ jest.mock('../src/datatypes/TNC/getTnC', () => ({
   }),
 }));
 
+// Major List Mock Data
+jest.mock('../src/datatypes/MajorList/getMajorList', () => ({
+  __esModule: true,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  default: jest.fn(async (_req: Request, schoolDomain: string) => {
+    return {
+      majorList: [
+        'Animal Science',
+        'Computer Science',
+        'Chemistry',
+        'Electrical Engineering',
+        'Physics',
+        'Mathematics',
+        'Biology',
+        'Economics',
+        'Psychology',
+        'English',
+        'History',
+        'Sociology',
+      ].sort(),
+    };
+  }),
+}));
+
 // OTP Mock Data
 jest.mock('../src/datatypes/OTP/verifyOTPRequest', () => ({
   __esModule: true,
