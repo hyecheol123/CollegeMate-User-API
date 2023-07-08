@@ -1,5 +1,5 @@
 /**
- * Jest unit test for Delete /user/{base64Email} method
+ * Jest unit test for Delete /user/profile/{base64Email} method
  *
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
