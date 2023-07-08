@@ -1,7 +1,8 @@
 /**
- * Jest unit test for POST / profile / {base64Email} / lastlogin method
+ * Jest unit test for POST/profile/{base64Email}/lastlogin method
  *
  * @author Jeonghyeon Park <fishbox0923@gmail.com>
+ * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 
 // eslint-disable-next-line node/no-unpublished-import
@@ -13,12 +14,12 @@ import * as Cosmos from '@azure/cosmos';
 import ExpressServer from '../../../src/ExpressServer';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
 
-describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentication Server Use Only)', () => {
+describe('POST /profile/{base64Email}/lastlogin - Update Last Login (Authentication Server Use Only)', () => {
   let testEnv: TestEnv;
 
-  const accessTokenMap = {
+  const serverTokenMap = {
     refreshToken: '',
-    adminToken: '',
+    nonAuth: '',
     missingAccountType: '',
     valid: '',
     user: '',
@@ -38,7 +39,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
       tokenType: 'serverAdmin',
       accountType: 'server - authentication',
     };
-    accessTokenMap.valid = jwt.sign(
+    serverTokenMap.valid = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
       {
@@ -54,7 +55,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
       tokenType: 'serverAdmin',
       accountType: 'admin',
     };
-    accessTokenMap.adminToken = jwt.sign(
+    serverTokenMap.nonAuth = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
       {
@@ -69,7 +70,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
       type: 'access',
       tokenType: 'serverAdmin',
     };
-    accessTokenMap.missingAccountType = jwt.sign(
+    serverTokenMap.missingAccountType = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
       {
@@ -85,7 +86,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
       tokenType: 'serverAdmin',
       accountType: 'server - authentication',
     };
-    accessTokenMap.refreshToken = jwt.sign(
+    serverTokenMap.refreshToken = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
       {
@@ -101,7 +102,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
       tokenType: 'user',
     };
     // Generate AccessToken
-    accessTokenMap.user = jwt.sign(
+    serverTokenMap.user = jwt.sign(
       tokenContent,
       testEnv.testConfig.jwt.secretKey,
       {algorithm: 'HS512', expiresIn: '10m'}
@@ -128,43 +129,42 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
     // Request without X-Server-Token
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lastlogin`)
-      .set({'X-OTHER-TOKEN': '<Some-Other-Value>'})
-      .set({Origin: 'https://collegemate.app'});
+      .set({'X-OTHER-TOKEN': '<Some-Other-Value>'});
     expect(response.status).toBe(401);
     expect(response.body.error).toBe('Unauthenticated');
   });
 
-  test('Fail - Request with invalid ServerAdminToken', async () => {
+  test('Fail - Request with invalid ServerAdminToken(nonAuth)', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
-    // Request
+    // Request with token missing accountType
     const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
       'base64url'
     );
     let response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.missingAccountType});
+      .set({'X-SERVER-TOKEN': serverTokenMap.missingAccountType});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
-    // Request
+    // Request with user access token
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.user});
+      .set({'X-SERVER-TOKEN': serverTokenMap.user});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
-    // Request
+    // Request with wrong token type
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.refreshToken});
+      .set({'X-SERVER-TOKEN': serverTokenMap.refreshToken});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
 
-    // Request
+    // Request from non-authentication server
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.adminToken});
+      .set({'X-SERVER-TOKEN': serverTokenMap.nonAuth});
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('Forbidden');
   });
@@ -198,44 +198,69 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
     expect(response.body.error).toBe('Forbidden');
   });
 
-  // user.ts line 234 체크하는데..?
-  test('Fail - Not existing id', async () => {
+  test('Fail - Wrong Email Format', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
-    testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
     // Request
-    const invalidEmail = Buffer.from('doesnotExist@wisc.edu', 'utf8').toString(
+    const wrongEmail = Buffer.from('WrongEmailType', 'utf8').toString(
       'base64url'
     );
     const response = await request(testEnv.expressServer.app)
-      .post(`/user/profile/${invalidEmail}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .post(`/user/profile/${wrongEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         lastLogin: '2023-05-31T14:48:00.000Z',
       });
     expect(response.status).toBe(404);
     expect(response.body.error).toBe('Not Found');
-
-    // check if it is updated in the database
-    const dbOps = await testEnv.dbClient
-      .container('user')
-      .item('doesnotExist@wisc.edu')
-      .read();
-    // user.ts line 272 체크해볼려는데 모르겠음..
-    expect(dbOps.statusCode).toBe(404);
-    expect(dbOps.resource).toBe(undefined);
   });
 
-  test('Fail - Bad Request', async () => {
+  test('Fail - Non-Existent Email', async () => {
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+
+    // Request
+    const invalidEmail = Buffer.from('invalidEmail@wisc.edu', 'utf8').toString(
+      'base64url'
+    );
+    const response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${invalidEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({
+        lastLogin: '2023-05-31T14:48:00.000Z',
+      });
+    expect(response.status).toBe(404);
+    expect(response.body.error).toBe('Not Found');
+  });
+
+  test('Fail - Invalid, Additional, or No Request Body', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
 
     // Request with invalid request body
     const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
       'base64url'
     );
-    const response = await request(testEnv.expressServer.app)
+    let response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({invalidProperty: 'invalidValue'});
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+
+    // Request with invalid request body
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({
+        lastLogin: '2023-05-31T14:48:00.000Z',
+        invalidProperty: 'invalidValue',
+      });
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+
+    // Request with invalid request body
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({invalidProperty: 'invalidValue'});
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Bad Request');
@@ -250,7 +275,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
     );
     let response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${lockedEmail}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         lastLogin: '2023-05-31T14:48:00.000Z',
       });
@@ -263,7 +288,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
     );
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${deletedEmail}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         lastLogin: '2023-05-31T14:48:00.000Z',
       });
@@ -277,7 +302,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
     ).toString('base64url');
     response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${lockedAndDeleted}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         lastLogin: '2023-05-31T14:48:00.000Z',
       });
@@ -285,7 +310,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
     expect(response.body.error).toBe('Conflict');
   });
 
-  test('Success - Post lastLogin', async () => {
+  test('Success', async () => {
     testEnv.expressServer = testEnv.expressServer as ExpressServer;
     testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
 
@@ -295,7 +320,7 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
     );
     const response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lastlogin`)
-      .set({'X-SERVER-TOKEN': accessTokenMap.valid})
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         lastLogin: '2023-05-31T14:48:00.000Z',
       });
@@ -312,8 +337,5 @@ describe('POST/ profile/ {base64Email}/ lastlogin - Update Last Login (Authentic
     expect(dbOps.resource).not.toHaveProperty('lockedDescription');
     expect(dbOps.resource).not.toHaveProperty('lockedAt');
     expect(dbOps.resource).not.toHaveProperty('deletedAt');
-
-    // expect(new Date(response.body.lastLogin).toISOString()).toEqual(
-    //     new Date('2023-05-31T14:48:00.000Z').toISOString());
   });
 });

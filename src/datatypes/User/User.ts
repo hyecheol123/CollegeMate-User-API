@@ -268,6 +268,7 @@ export default class User {
       .item(id)
       .patch([{op: 'set', path: '/lastLogin', value: lastLogin}]);
 
+    // istanbul ignore if
     if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
       throw new NotFoundError();
     }
