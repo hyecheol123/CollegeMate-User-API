@@ -25,6 +25,7 @@ describe('POST /user - Create User', () => {
     valid: {} as UserPostRequestObj,
     wrongEmail: {} as UserPostRequestObj,
     wrongTnC: {} as UserPostRequestObj,
+    wrongMajor: {} as UserPostRequestObj,
   };
 
   beforeEach(async () => {
@@ -109,6 +110,15 @@ describe('POST /user - Create User', () => {
       tncVersion: 'v1.0.0',
     };
     userMap.wrongTnC = userReq;
+    // Wrong major User
+    userReq = {
+      email: 'user@wisc.edu',
+      nickname: 'Janice',
+      major: 'Wrong Major',
+      graduationYear: 2023,
+      tncVersion: 'v1.0.2',
+    };
+    userMap.wrongMajor = userReq;
   });
 
   afterEach(async () => {
@@ -319,6 +329,19 @@ describe('POST /user - Create User', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
       .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
       .send(userMap.wrongTnC);
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('Conflict');
+  });
+
+  test('Fail - Wrong Major', async () => {
+    testEnv.expressServer = testEnv.expressServer as ExpressServer;
+
+    // Wrong Major
+    const response = await request(testEnv.expressServer.app)
+      .post('/user')
+      .set({'X-ACCESS-TOKEN': accessTokenMap.valid})
+      .set({'X-APPLICATION-KEY': '<Android-App-v1>'})
+      .send(userMap.wrongMajor);
     expect(response.status).toBe(409);
     expect(response.body.error).toBe('Conflict');
   });
