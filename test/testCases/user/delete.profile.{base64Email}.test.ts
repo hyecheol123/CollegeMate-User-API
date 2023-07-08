@@ -1,5 +1,5 @@
 /**
- * Jest unit test for GET /user/{base64id} method
+ * Jest unit test for Delete /user/{base64Email} method
  *
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
@@ -15,7 +15,7 @@ import AuthToken from '../../../src/datatypes/Token/AuthToken';
 
 const USER = 'user';
 
-describe('GET /user/profile/{base64id} - Get User Profile', () => {
+describe('DELETE /user/profile/{base64Email} - Delete User Profile', () => {
   let testEnv: TestEnv;
   const accessTokenMap = {
     valid: '',
