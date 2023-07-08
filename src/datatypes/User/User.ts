@@ -6,12 +6,14 @@
  */
 import * as Cosmos from '@azure/cosmos';
 import NotFoundError from '../../exceptions/NotFoundError';
+import IUserUpdateObj from './IUserUpdateObj';
 
 const USER = 'user';
 
 export default class User {
   id: string;
   nickname: string;
+  searchTerm: string;
   lastLogin: Date | string;
   signUpDate: Date | string;
   nicknameChanged: Date | string;
@@ -113,6 +115,7 @@ export default class User {
   ) {
     this.id = id;
     this.nickname = nickname;
+    this.searchTerm = nickname.toUpperCase();
     this.lastLogin = lastLogin;
     this.signUpDate = signUpDate;
     this.nicknameChanged = nicknameChanged;
@@ -158,6 +161,8 @@ export default class User {
     dbClient: Cosmos.Database,
     nickname: string
   ): Promise<boolean> {
+    // Convert the nickname to uppercase for case-insensitive search
+    const searchTerm = nickname.toUpperCase();
     // Query that checks whether the nickname is already used or not
     return (
       (
@@ -165,10 +170,10 @@ export default class User {
           .container(USER)
           .items.query({
             query: String.prototype.concat(
-              `SELECT ${USER}.nickname FROM ${USER} `,
-              `WHERE ${USER}.deleted = false AND ${USER}.nickname = @nickname`
+              `SELECT ${USER}.searchTerm FROM ${USER} `,
+              `WHERE ${USER}.deleted = false AND ${USER}.searchTerm = @searchTerm`
             ),
-            parameters: [{name: '@nickname', value: nickname}],
+            parameters: [{name: '@searchTerm', value: searchTerm}],
           })
           .fetchAll()
       ).resources.length === 0
@@ -251,6 +256,60 @@ export default class User {
   }
 
   /**
+   * Update user with description provided
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} id id of the user to lock
+   * @param {IUserUpdateObj} updateObj object that contains update information
+   */
+  static async update(
+    dbClient: Cosmos.Database,
+    id: string,
+    updateObj: IUserUpdateObj
+  ): Promise<void> {
+    const updateOps: Cosmos.PatchOperation[] = [];
+    const updateDate = new Date().toISOString();
+    if (updateObj.nickname !== undefined) {
+      updateOps.push({
+        op: 'set',
+        path: '/nickname',
+        value: updateObj.nickname,
+      });
+      updateOps.push({
+        op: 'set',
+        path: '/searchTerm',
+        value: updateObj.nickname.toUpperCase(),
+      });
+      updateOps.push({
+        op: 'set',
+        path: '/nicknameChanged',
+        value: updateDate,
+      });
+    }
+    if (updateObj.major !== undefined) {
+      updateOps.push({
+        op: 'set',
+        path: '/major',
+        value: updateObj.major,
+      });
+    }
+    if (updateObj.graduationYear !== undefined) {
+      updateOps.push({
+        op: 'set',
+        path: '/graduationYear',
+        value: updateObj.graduationYear,
+      });
+    }
+
+    // Query that locks the user
+    const dbOps = await dbClient.container(USER).item(id).patch(updateOps);
+    // istanbul ignore if
+    if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
+      throw new NotFoundError();
+    }
+  }
+
+  /**
    * Update TnC field of user with version provided
    *
    * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
@@ -268,6 +327,7 @@ export default class User {
       .item(id)
       .patch([{op: 'set', path: '/tncVersion', value: tncVersion}]);
 
+    // istanbul ignore if
     if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
       throw new NotFoundError();
     }
