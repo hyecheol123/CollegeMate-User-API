@@ -28,6 +28,8 @@ import {validateUserPostRequest} from '../functions/inputValidator/validateUserP
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import {validateDeleteAcountRequest} from '../functions/inputValidator/validateDeleteAcountRequest';
 import {validateUserUpdateRequest} from '../functions/inputValidator/validateUserUpdateRequest';
+import OTPResponse from '../datatypes/OTP/OTPResponse';
+import HTTPError from '../exceptions/HTTPError';
 
 // Path: /user
 const userRouter = express.Router();
@@ -155,10 +157,20 @@ userRouter.delete('/profile/:base64Email', async (req, res, next) => {
     const {otpRequestId} = req.body;
 
     // verify OTP request
-    const otpRequest = await getVerifyOTP(otpRequestId, req);
+    let otpRequest: OTPResponse | undefined;
+    try {
+      otpRequest = await getVerifyOTP(otpRequestId, req);
+    } catch (e) {
+      if ((e as HTTPError).statusCode === 404) {
+        throw new ForbiddenError();
+      } else {
+        throw e;
+      }
+    }
 
     // check if OTP is verified and email matches
     if (
+      !otpRequest ||
       !otpRequest.verified ||
       otpRequest.email !== requestUserEmail ||
       otpRequest.purpose !== 'sudo'

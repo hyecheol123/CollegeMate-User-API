@@ -27,19 +27,19 @@ describe('DELETE /user/profile/{base64Email} - Delete User Profile', () => {
     deleted: '',
   };
   const requestIdMap = {
-    steve: '',
-    drag: '',
-    locked: '',
-    deleted: '',
-    unverified: '',
-    expired: '',
-    signin: '',
+    steve: 'steveotp',
+    drag: 'dragotp',
+    locked: 'lockedotp',
+    deleted: 'deletedotp',
+    unverified: 'unverifiedotp',
+    expired: 'expiredotp',
+    signin: 'signinotp',
   };
   const encodedEmailMap = {
-    steve: '',
-    drag: '',
-    locked: '',
-    deleted: '',
+    steve: Buffer.from('steve@wisc.edu', 'utf8').toString('base64url'),
+    drag: Buffer.from('drag@wisc.edu', 'utf8').toString('base64url'),
+    locked: Buffer.from('locked@wisc.edu', 'utf8').toString('base64url'),
+    deleted: Buffer.from('deleted@wisc.edu', 'utf8').toString('base64url'),
   };
 
   beforeEach(async () => {
@@ -48,32 +48,6 @@ describe('DELETE /user/profile/{base64Email} - Delete User Profile', () => {
 
     // Start Test Environment
     await testEnv.start();
-
-    // Create Mocked OTP Request Map
-    requestIdMap.steve = 'steveotp';
-    requestIdMap.drag = 'dragotp';
-    requestIdMap.locked = 'lockedotp';
-    requestIdMap.deleted = 'deletedotp';
-    requestIdMap.unverified = 'unverifiedotp';
-    requestIdMap.expired = 'expiredotp';
-    requestIdMap.signin = 'signinotp';
-
-    // Create Test Encoded Emails
-    encodedEmailMap.steve = Buffer.from('steve@wisc.edu', 'utf8').toString(
-      'base64url'
-    );
-
-    encodedEmailMap.drag = Buffer.from('drag@wisc.edu', 'utf8').toString(
-      'base64url'
-    );
-
-    encodedEmailMap.locked = Buffer.from('locked@wisc.edu', 'utf8').toString(
-      'base64url'
-    );
-
-    encodedEmailMap.deleted = Buffer.from('deleted@wisc.edu', 'utf8').toString(
-      'base64url'
-    );
 
     // Create Access Token
     // Valid Access Token
@@ -284,8 +258,8 @@ describe('DELETE /user/profile/{base64Email} - Delete User Profile', () => {
       .set({'X-ACCESS-TOKEN': accessTokenMap.steve})
       .set({Origin: 'https://collegemate.app'})
       .send({otpRequestId: 'doesnotexist'});
-    expect(response.status).toBe(404);
-    expect(response.body.error).toBe('Not Found');
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
   });
 
   test('Fail - Wrong and Unverified OTP Request', async () => {
@@ -389,6 +363,13 @@ describe('DELETE /user/profile/{base64Email} - Delete User Profile', () => {
     expect(dbOps.resource.deleted).toBe(true);
     expect(dbOps.resource.deletedAt).not.toBeUndefined();
     expect(dbOps.resource.locked).toBe(false);
+    expect(dbOps.resource.nickname).toBe('steve');
+    expect(dbOps.resource.searchTerm).toBe('STEVE');
+    expect(dbOps.resource.nicknameChanged).toBe(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(dbOps.resource.major).toBe('Computer Science');
+    expect(dbOps.resource.graduationYear).toBe(2024);
 
     // From App
     // Delete Drag
@@ -414,5 +395,12 @@ describe('DELETE /user/profile/{base64Email} - Delete User Profile', () => {
     expect(dbOps.resource.deleted).toBe(true);
     expect(dbOps.resource.deletedAt).not.toBeUndefined();
     expect(dbOps.resource.locked).toBe(false);
+    expect(dbOps.resource.major).toBe('Computer Science');
+    expect(dbOps.resource.nickname).toBe('drag');
+    expect(dbOps.resource.searchTerm).toBe('DRAG');
+    expect(dbOps.resource.nicknameChanged).toBe(
+      new Date('2023-02-10T00:50:43.000Z').toISOString()
+    );
+    expect(dbOps.resource.graduationYear).toBe(2024);
   });
 });
