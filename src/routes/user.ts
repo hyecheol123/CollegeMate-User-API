@@ -151,7 +151,11 @@ userRouter.delete('/profile/:base64Email', async (req, res, next) => {
     );
 
     // check if OTP is verified and email matches
-    if (!otpRequest.verified || otpRequest.email !== requestUserEmail) {
+    if (
+      !otpRequest.verified ||
+      otpRequest.email !== requestUserEmail ||
+      otpRequest.purpose !== 'sudo'
+    ) {
       throw new ForbiddenError();
     }
 
