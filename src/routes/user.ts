@@ -488,13 +488,10 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
     }
 
     // Check request body
-    const lastLoginRequest: {lastLogin: string} = req.body;
-    if (!validateLastLoginRequest(lastLoginRequest)) {
+    if (!validateLastLoginRequest(req.body)) {
       throw new BadRequestError();
     }
-    lastLoginRequest.lastLogin = new Date(
-      lastLoginRequest.lastLogin
-    ).toISOString();
+    const lastLogin = new Date(req.body.lastLogin);
 
     const user = await User.read(dbClient, requestUserEmail);
     if (user.deleted || user.locked) {
@@ -502,11 +499,7 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
     }
 
     // update User lastLogin with requested email
-    await User.updateLastLogin(
-      dbClient,
-      requestUserEmail,
-      lastLoginRequest.lastLogin
-    );
+    await User.updateLastLogin(dbClient, requestUserEmail, lastLogin);
 
     // response
     res.status(200).send();

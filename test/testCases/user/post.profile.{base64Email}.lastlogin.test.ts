@@ -264,6 +264,80 @@ describe('POST /profile/{base64Email}/lastlogin - Update Last Login (Authenticat
       .send({invalidProperty: 'invalidValue'});
     expect(response.status).toBe(400);
     expect(response.body.error).toBe('Bad Request');
+
+    // Request with correct property name with non ISO datetime string
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: 'invalidValue'});
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+
+    // Request with correct property name with invalid ISO datetime string
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2023-05-31T24:48:00.000Z'}); // Invalid hour
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2023-05-31T14:61:00.000Z'}); // Invalid minute
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2023-05-31T14:51:99.000Z'}); // Invalid second
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2023-13-31T14:51:31.000Z'}); // Invalid month
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2023-00-31T14:51:00.000Z'}); // Invalid month
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2024-02-30T14:51:00.000Z'}); // Invalid date, leap
+    expect(response.status).toBe(400);
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2023-02-29T14:51:00.000Z'}); // Invalid date, non leap
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2023-03-32T14:51:00.000Z'}); // Invalid date, non leap
+    expect(response.status).toBe(400);
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2023-03-00T14:51:00.000Z'}); // Invalid date, non leap
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2023-09-31T14:51:00.000Z'}); // Invalid date, non leap
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({lastLogin: '2100-02-29T14:51:00.000Z'}); // Invalid date, non leap
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
   });
 
   test('Fail - User Locked or/and Deleted', async () => {
@@ -318,20 +392,59 @@ describe('POST /profile/{base64Email}/lastlogin - Update Last Login (Authenticat
     const encodedEmail = Buffer.from('steve@wisc.edu', 'utf8').toString(
       'base64url'
     );
-    const response = await request(testEnv.expressServer.app)
+    let response = await request(testEnv.expressServer.app)
       .post(`/user/profile/${encodedEmail}/lastlogin`)
       .set({'X-SERVER-TOKEN': serverTokenMap.valid})
       .send({
         lastLogin: '2023-05-31T14:48:00.000Z',
       });
     expect(response.status).toBe(200);
-
     // check if it is updated in the database
-    const dbOps = await testEnv.dbClient
+    let dbOps = await testEnv.dbClient
       .container('user')
       .item('steve@wisc.edu')
       .read();
     expect(dbOps.resource.lastLogin).toContain('2023-05-31T14:48:00.000Z');
+    expect(dbOps.resource.deleted).toBe(false);
+    expect(dbOps.resource.locked).toBe(false);
+    expect(dbOps.resource).not.toHaveProperty('lockedDescription');
+    expect(dbOps.resource).not.toHaveProperty('lockedAt');
+    expect(dbOps.resource).not.toHaveProperty('deletedAt');
+
+    // Leap Year: 2020
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({
+        lastLogin: '2020-02-29T14:48:00.000Z',
+      });
+    expect(response.status).toBe(200);
+    // check if it is updated in the database
+    dbOps = await testEnv.dbClient
+      .container('user')
+      .item('steve@wisc.edu')
+      .read();
+    expect(dbOps.resource.lastLogin).toBe('2020-02-29T14:48:00.000Z');
+    expect(dbOps.resource.deleted).toBe(false);
+    expect(dbOps.resource.locked).toBe(false);
+    expect(dbOps.resource).not.toHaveProperty('lockedDescription');
+    expect(dbOps.resource).not.toHaveProperty('lockedAt');
+    expect(dbOps.resource).not.toHaveProperty('deletedAt');
+
+    // Leap Year (2000)
+    response = await request(testEnv.expressServer.app)
+      .post(`/user/profile/${encodedEmail}/lastlogin`)
+      .set({'X-SERVER-TOKEN': serverTokenMap.valid})
+      .send({
+        lastLogin: '2000-02-29T14:48:00.000Z',
+      });
+    expect(response.status).toBe(200);
+    // check if it is updated in the database
+    dbOps = await testEnv.dbClient
+      .container('user')
+      .item('steve@wisc.edu')
+      .read();
+    expect(dbOps.resource.lastLogin).toBe('2000-02-29T14:48:00.000Z');
     expect(dbOps.resource.deleted).toBe(false);
     expect(dbOps.resource.locked).toBe(false);
     expect(dbOps.resource).not.toHaveProperty('lockedDescription');

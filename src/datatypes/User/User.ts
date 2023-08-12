@@ -319,13 +319,13 @@ export default class User {
   static async updateLastLogin(
     dbClient: Cosmos.Database,
     id: string,
-    lastLogin: string
+    lastLogin: Date
   ): Promise<void> {
     // Update last login field
     const dbOps = await dbClient
       .container(USER)
       .item(id)
-      .patch([{op: 'set', path: '/lastLogin', value: lastLogin}]);
+      .patch([{op: 'set', path: '/lastLogin', value: lastLogin.toISOString()}]);
 
     // istanbul ignore if
     if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
