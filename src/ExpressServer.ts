@@ -94,7 +94,15 @@ export default class ExpressServer {
     this.app.use((_req, res) => {
       res.status(404).send({error: 'Not Found'});
     });
+  }
 
+  /**
+   * Method to initialize MS Graph Client.
+   *
+   * @param config Server's configuration variables
+   */
+  // istanbul ignore next
+  initMSGraphClient(config: ServerConfig): void {
     // Azure App Registration Authentication Information (For Microsoft Graph API)
     const azureCredential = new ClientSecretCredential(
       config.azureAppRegistrationInfo.tenantId,

@@ -20,6 +20,7 @@ const configInstance = new ServerConfig(
   process.env.DB_ID
 );
 const expressServer = new ExpressServer(configInstance); // express server setup
+expressServer.initMSGraphClient(configInstance);
 
 // Startup the express server
 const {app} = expressServer;
