@@ -162,6 +162,7 @@ userRouter.delete('/profile/:base64Email', async (req, res, next) => {
     try {
       otpRequest = await getVerifyOTP(otpRequestId, req);
     } catch (e) {
+      /* istanbul ignore else */
       if ((e as HTTPError).statusCode === 404) {
         throw new ForbiddenError();
       } else {
@@ -419,10 +420,10 @@ userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
     );
 
     // Check request body
-    const TNCAcceptRequest: {tncVersion: string} = req.body;
-    if (!validateTNCAcceptRequest(TNCAcceptRequest)) {
+    if (!validateTNCAcceptRequest(req.body)) {
       throw new BadRequestError();
     }
+    const {tncVersion} = req.body;
 
     // check request parameter
     const requestUserEmail = Buffer.from(
@@ -442,17 +443,13 @@ userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
       throw new ForbiddenError();
     }
 
-    // Check if the TnC version is the latest
+    // Check whether the TnC version is valid or not
     const latestTnCVersion = (await getTnC(req)).version;
-    if (!latestTnCVersion || latestTnCVersion !== TNCAcceptRequest.tncVersion) {
+    if (!latestTnCVersion || latestTnCVersion !== tncVersion) {
       throw new ConflictError();
     }
 
-    await User.updateTNC(
-      dbClient,
-      requestUserEmail,
-      TNCAcceptRequest.tncVersion
-    );
+    await User.updateTNC(dbClient, requestUserEmail, tncVersion);
 
     res.status(200).send();
   } catch (e) {

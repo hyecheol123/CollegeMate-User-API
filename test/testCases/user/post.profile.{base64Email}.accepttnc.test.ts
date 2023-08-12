@@ -27,10 +27,10 @@ describe('POST /user/profile/{base64Email}/accepttnc - Accept New Terms and Cond
     deleted: '',
   };
   const encodedEmailMap = {
-    steve: '',
-    drag: '',
-    locked: '',
-    deleted: '',
+    steve: Buffer.from('steve@wisc.edu', 'utf8').toString('base64url'),
+    drag: Buffer.from('drag@wisc.edu', 'utf8').toString('base64url'),
+    locked: Buffer.from('locked@wisc.edu', 'utf8').toString('base64url'),
+    deleted: Buffer.from('deleted@wisc.edu', 'utf8').toString('base64url'),
   };
 
   beforeEach(async () => {
@@ -42,23 +42,6 @@ describe('POST /user/profile/{base64Email}/accepttnc - Accept New Terms and Cond
 
     // Setup dbClient for tncVersion change
     testEnv.dbClient = testEnv.dbClient as Cosmos.Database;
-
-    // Create Test Encoded Emails
-    encodedEmailMap.steve = Buffer.from('steve@wisc.edu', 'utf8').toString(
-      'base64url'
-    );
-
-    encodedEmailMap.drag = Buffer.from('drag@wisc.edu', 'utf8').toString(
-      'base64url'
-    );
-
-    encodedEmailMap.locked = Buffer.from('locked@wisc.edu', 'utf8').toString(
-      'base64url'
-    );
-
-    encodedEmailMap.deleted = Buffer.from('deleted@wisc.edu', 'utf8').toString(
-      'base64url'
-    );
 
     // Create Access Token
     // Valid Access Token
