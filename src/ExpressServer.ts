@@ -10,6 +10,9 @@ import * as cookieParser from 'cookie-parser';
 import ServerConfig from './ServerConfig';
 import HTTPError from './exceptions/HTTPError';
 import userRouter from './routes/user';
+import {Client} from '@microsoft/microsoft-graph-client';
+import {ClientSecretCredential} from '@azure/identity';
+import {TokenCredentialAuthenticationProvider} from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials';
 
 /**
  * Class contains Express Application and other relevant instances/functions
@@ -91,14 +94,36 @@ export default class ExpressServer {
     this.app.use((_req, res) => {
       res.status(404).send({error: 'Not Found'});
     });
+
+    // Azure App Registration Authentication Information (For Microsoft Graph API)
+    const azureCredential = new ClientSecretCredential(
+      config.azureAppRegistrationInfo.tenantId,
+      config.azureAppRegistrationInfo.clientId,
+      config.azureAppRegistrationInfo.clientSecret
+    );
+    const azureAuthProvider = new TokenCredentialAuthenticationProvider(
+      azureCredential,
+      {scopes: ['https://graph.microsoft.com/.default']}
+    );
+    this.app.locals.msGraphClient = Client.initWithMiddleware({
+      authProvider: azureAuthProvider,
+    });
+    this.app.set(
+      'azureUserObjId',
+      config.azureAppRegistrationInfo.userObjectId
+    );
+    this.app.set(
+      'noReplyEmailAddress',
+      config.azureAppRegistrationInfo.noReplyEmailAddress
+    );
+    this.app.set(
+      'mainEmailAddress',
+      config.azureAppRegistrationInfo.mainEmailAddress
+    );
   }
 
-  // TODO: Asyncronously set serverAdminToken
-
-  // TODO: Azure App Registration
-
   /**
-   * CLose Server
+   * Close Server
    * - Close connection with Database server gracefully
    * - Flush Log
    */
