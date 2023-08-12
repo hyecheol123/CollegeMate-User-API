@@ -6,6 +6,9 @@
  * @author Seok-Hee (Steve) Han <seokheehan01@gmail.com>
  */
 
+import OTPResponse from '../src/datatypes/OTP/OTPResponse';
+import NotFoundError from '../src/exceptions/NotFoundError';
+
 // TnC Mock Data
 jest.mock('../src/datatypes/TNC/getTnC', () => ({
   __esModule: true,
@@ -41,4 +44,75 @@ jest.mock('../src/datatypes/MajorList/getMajorList', () => ({
       ].sort(),
     };
   }),
+}));
+
+// OTP Mock Data
+jest.mock('../src/datatypes/OTP/getVerifyOTP', () => ({
+  __esModule: true,
+  default: jest
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    .fn(async (requestID: string, _req: Request) => {
+      let returnValue: OTPResponse;
+      // 15 minutes from now
+      const validExpireAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      switch (requestID) {
+        case 'signinotp':
+          returnValue = {
+            email: 'steve@wisc.edu',
+            purpose: 'signin',
+            verified: true,
+            expireAt: validExpireAt,
+          };
+          return returnValue;
+        case 'expiredotp':
+          returnValue = {
+            email: 'steve@wisc.edu',
+            purpose: 'sudo',
+            verified: true,
+            expireAt: new Date('2022-03-01T00:50:43.000Z').toISOString(),
+          };
+          return returnValue;
+        case 'unverifiedotp':
+          returnValue = {
+            email: 'steve@wisc.edu',
+            purpose: 'sudo',
+            verified: false,
+          };
+          return returnValue;
+        case 'steveotp':
+          returnValue = {
+            email: 'steve@wisc.edu',
+            purpose: 'sudo',
+            verified: true,
+            expireAt: validExpireAt,
+          };
+          return returnValue;
+        case 'dragotp':
+          returnValue = {
+            email: 'drag@wisc.edu',
+            purpose: 'sudo',
+            verified: true,
+            expireAt: validExpireAt,
+          };
+          return returnValue;
+        case 'lockedotp':
+          returnValue = {
+            email: 'locked@wisc.edu',
+            purpose: 'sudo',
+            verified: true,
+            expireAt: validExpireAt,
+          };
+          return returnValue;
+        case 'deletedotp':
+          returnValue = {
+            email: 'deleted@wisc.edu',
+            purpose: 'sudo',
+            verified: true,
+            expireAt: validExpireAt,
+          };
+          return returnValue;
+        default:
+          throw new NotFoundError();
+      }
+    }),
 }));
