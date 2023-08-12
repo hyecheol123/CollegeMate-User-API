@@ -30,6 +30,7 @@ import {validateUserPostRequest} from '../functions/inputValidator/validateUserP
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
 import {validateDeleteAcountRequest} from '../functions/inputValidator/validateDeleteAcountRequest';
 import {validateUserUpdateRequest} from '../functions/inputValidator/validateUserUpdateRequest';
+import {validateLastLoginRequest} from '../functions/inputValidator/validateLastLoginRequest';
 import {validateTNCAcceptRequest} from '../functions/inputValidator/validateTNCAcceptRequest';
 
 // Path: /user
@@ -457,10 +458,55 @@ userRouter.post('/profile/:base64Email/accepttnc', async (req, res, next) => {
   }
 });
 
-// // POST: /user/profile/{base64Email}/lastlogin
-// userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
-//   // TODO
-// });
+// POST: /user/profile/{base64Email}/lastlogin
+userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+
+  try {
+    // Header check - serverAdminToken
+    const serverToken = req.header('X-SERVER-TOKEN');
+    if (serverToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    const tokenContents = verifyServerAdminToken(
+      serverToken,
+      req.app.get('jwtAccessKey')
+    );
+    // Check if token is from authentication server
+    if (tokenContents.accountType !== 'server - authentication') {
+      throw new ForbiddenError();
+    }
+
+    // Check parameter
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64url'
+    ).toString('utf8');
+
+    if (!validateEmail(requestUserEmail)) {
+      throw new NotFoundError();
+    }
+
+    // Check request body
+    if (!validateLastLoginRequest(req.body)) {
+      throw new BadRequestError();
+    }
+    const lastLogin = new Date(req.body.lastLogin);
+
+    const user = await User.read(dbClient, requestUserEmail);
+    if (user.deleted || user.locked) {
+      throw new ConflictError();
+    }
+
+    // update User lastLogin with requested email
+    await User.updateLastLogin(dbClient, requestUserEmail, lastLogin);
+
+    // response
+    res.status(200).send();
+  } catch (e) {
+    next(e);
+  }
+});
 
 // // POST: /user/profile/{base64Email}/lock
 // userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {

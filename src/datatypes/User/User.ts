@@ -310,6 +310,30 @@ export default class User {
   }
 
   /**
+   * Update lastLogin field of user with date-time provided
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} id id of the user
+   * @param {string} lastLogin lastLogin date
+   */
+  static async updateLastLogin(
+    dbClient: Cosmos.Database,
+    id: string,
+    lastLogin: Date
+  ): Promise<void> {
+    // Update last login field
+    const dbOps = await dbClient
+      .container(USER)
+      .item(id)
+      .patch([{op: 'set', path: '/lastLogin', value: lastLogin.toISOString()}]);
+
+    // istanbul ignore if
+    if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
+      throw new NotFoundError();
+    }
+  }
+
+  /*
    * Update TnC field of user with version provided
    *
    * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
