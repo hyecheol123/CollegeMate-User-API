@@ -7,6 +7,7 @@
 
 import * as express from 'express';
 import * as Cosmos from '@azure/cosmos';
+import {Client} from '@microsoft/microsoft-graph-client';
 import {Buffer} from 'node:buffer';
 import AuthToken from '../datatypes/Token/AuthToken';
 import User from '../datatypes/User/User';
@@ -25,6 +26,8 @@ import UnauthenticatedError from '../exceptions/UnauthenticatedError';
 import NotFoundError from '../exceptions/NotFoundError';
 import verifyAccessToken from '../functions/JWT/verifyAccessToken';
 import verifyServerAdminToken from '../functions/JWT/verifyServerAdminToken';
+import sendLockMail from '../functions/utils/sendLockMail';
+import {validateLockUserRequest} from '../functions/inputValidator/validateLockUserRequest';
 import {validateEmail} from '../functions/inputValidator/validateEmail';
 import {validateUserPostRequest} from '../functions/inputValidator/validateUserPostProfileRequest';
 import {validateVerifyNicknameRequest} from '../functions/inputValidator/validateVerifyNicknameRequest';
@@ -508,10 +511,60 @@ userRouter.post('/profile/:base64Email/lastlogin', async (req, res, next) => {
   }
 });
 
-// // POST: /user/profile/{base64Email}/lock
-// userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
-//   // TODO
-// });
+// POST: /user/profile/{base64Email}/lock
+userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
+  const dbClient: Cosmos.Database = req.app.locals.dbClient;
+  const msGraphClient: Client = req.app.locals.msGraphClient;
+
+  try {
+    // Header check - serverAdminToken
+    const serverToken = req.header('X-SERVER-TOKEN');
+    if (serverToken === undefined) {
+      throw new UnauthenticatedError();
+    }
+    verifyServerAdminToken(serverToken, req.app.get('jwtAccessKey'));
+
+    // Check parameter
+    const requestUserEmail = Buffer.from(
+      req.params.base64Email,
+      'base64url'
+    ).toString('utf8');
+
+    if (!validateEmail(requestUserEmail)) {
+      throw new NotFoundError();
+    }
+
+    // Check request body
+    if (!validateLockUserRequest(req.body)) {
+      throw new BadRequestError();
+    }
+    const {description} = req.body;
+
+    // block if user is already locked or deleted
+    const user = await User.read(dbClient, requestUserEmail);
+    if (user.locked || user.deleted) {
+      throw new ConflictError();
+    }
+
+    // lock User with requested email
+    await User.lock(dbClient, requestUserEmail, description);
+
+    // Send Notice Email to user
+    await sendLockMail(
+      msGraphClient,
+      req.app.get('azureUserObjId'),
+      req.app.get('noReplyEmailAddress'),
+      req.app.get('mainEmailAddress'),
+      requestUserEmail,
+      description
+    );
+
+    // response
+    res.status(200).send();
+  } catch (e) {
+    next(e);
+  }
+});
 
 // GET: /user/check-nickname
 userRouter.get('/check-nickname', async (req, res, next) => {

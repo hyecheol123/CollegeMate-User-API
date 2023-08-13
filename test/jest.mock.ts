@@ -46,6 +46,12 @@ jest.mock('../src/datatypes/MajorList/getMajorList', () => ({
   }),
 }));
 
+// Mocking Email Sending Module
+jest.mock('../src/functions/utils/sendLockMail', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => Promise.resolve()),
+}));
+
 // OTP Mock Data
 jest.mock('../src/datatypes/OTP/getVerifyOTP', () => ({
   __esModule: true,

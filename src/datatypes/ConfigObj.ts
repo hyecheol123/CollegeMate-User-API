@@ -17,6 +17,7 @@ export interface ConfigObj {
   serverApplicationKey: string; // Indicate application key to verify requests from server
   applicationKey: string[]; // Indicate the list of applicationKey (Mobile Application Origin Check)
   serverAdminKey: string; // Indicate unique key for this server
+  azureAppRegistrationInfo: AzureAppRegistrationObj; // Indicate Azure App Registration Authentication Information
 }
 
 /**
@@ -44,4 +45,17 @@ export interface JwtKeyObj {
 export interface ServerDomainPathObj {
   domain: string; // API Server's Domain
   path?: string; // API Server's path
+}
+
+/**
+ * Interface to define Azure App Registration's authentication information.
+ * This type of object should be contained in the ConfigObj.
+ */
+export interface AzureAppRegistrationObj {
+  clientId: string;
+  tenantId: string;
+  clientSecret: string;
+  userObjectId: string;
+  noReplyEmailAddress: string;
+  mainEmailAddress: string;
 }

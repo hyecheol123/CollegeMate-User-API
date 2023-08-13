@@ -310,6 +310,34 @@ export default class User {
   }
 
   /**
+   * Lock user with description provided
+   *
+   * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
+   * @param {string} id id of the user to lock
+   * @param {string} description description of the lock
+   */
+  static async lock(
+    dbClient: Cosmos.Database,
+    id: string,
+    description: string
+  ): Promise<void> {
+    // Query that locks the user
+    const dbOps = await dbClient
+      .container(USER)
+      .item(id)
+      .patch([
+        {op: 'set', path: '/locked', value: true},
+        {op: 'set', path: '/lockedDescription', value: description},
+        {op: 'set', path: '/lockedAt', value: new Date().toISOString()},
+      ]);
+
+    /* istanbul ignore if */
+    if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
+      throw new NotFoundError();
+    }
+  }
+
+  /*
    * Update lastLogin field of user with date-time provided
    *
    * @param {Cosmos.Database} dbClient DB Client (Cosmos Database)
