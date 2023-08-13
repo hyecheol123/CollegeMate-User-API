@@ -48,7 +48,28 @@ Data Diagram
 <details>
   <summary>Click to see configurations of each collection.</summary>
 
-  *To be added*
+  Configuration of `user` Collection
+
+  ``` JavaScript
+  {
+    id: 'user',
+    indexingPolicy: {
+      indexingMode: 'consistent',
+      automatic: true,
+      includedPaths: [{path: '/*'}],
+      excludedPaths: [
+        {path: '/"nicknameChangedAt"/?'},
+        {path: '/"deletedAt"/?'},
+        {path: '/"lockedDescription"/?'},
+        {path: '/"lockedAt"/?'},
+        {path: '/"_etag"/?'},
+      ],
+    },
+    uniqueKeyPolicy: {
+      uniqueKeys: [{paths: ['/nickname']}, {paths: ['/searchTerm']}],
+    },
+  }
+  ```
 </details>
 
 [Express](https://expressjs.com/) is a web framework for node.js.
