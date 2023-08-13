@@ -14,7 +14,7 @@ import TestEnv from '../../TestEnv';
 import ExpressServer from '../../../src/ExpressServer';
 import AuthToken from '../../../src/datatypes/Token/AuthToken';
 
-describe('POST /user/profile/{base64id} - Lock User (Server Use Only)', () => {
+describe('POST /user/profile/{base64Email} - Lock User (Server Use Only)', () => {
   let testEnv: TestEnv;
   const serverTokenMap = {
     accessToken: '',

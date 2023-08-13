@@ -30,7 +30,7 @@ export default async function sendLockMail(
 ): Promise<void> {
   const sendMail = {
     message: {
-      subject: 'CollegeMate - OTP Code',
+      subject: 'CollegeMate - Notice of Account Locked',
       body: {
         contentType: 'HTML',
         content: await ejs.renderFile(
@@ -38,7 +38,7 @@ export default async function sendLockMail(
           {email: email, description: description}
         ),
       },
-      bodyPreview: 'Lock Notice from CollegeMate',
+      bodyPreview: 'Account Lock Notice from CollegeMate',
       from: {emailAddress: {address: senderEmail}},
       replyTo: [{emailAddress: {address: replyEmail}}],
       toRecipients: [{emailAddress: {address: email}}],

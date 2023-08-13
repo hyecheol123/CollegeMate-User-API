@@ -535,10 +535,10 @@ userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
     }
 
     // Check request body
-    const lockUserRequest: {description: string} = req.body;
-    if (!validateLockUserRequest(lockUserRequest)) {
+    if (!validateLockUserRequest(req.body)) {
       throw new BadRequestError();
     }
+    const {description} = req.body;
 
     // block if user is already locked or deleted
     const user = await User.read(dbClient, requestUserEmail);
@@ -547,7 +547,7 @@ userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
     }
 
     // lock User with requested email
-    await User.lock(dbClient, requestUserEmail, lockUserRequest.description);
+    await User.lock(dbClient, requestUserEmail, description);
 
     // Send Notice Email to user
     await sendLockMail(
@@ -556,7 +556,7 @@ userRouter.post('/profile/:base64Email/lock', async (req, res, next) => {
       req.app.get('noReplyEmailAddress'),
       req.app.get('mainEmailAddress'),
       requestUserEmail,
-      lockUserRequest.description
+      description
     );
 
     // response

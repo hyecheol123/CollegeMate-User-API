@@ -331,6 +331,7 @@ export default class User {
         {op: 'set', path: '/lockedAt', value: new Date().toISOString()},
       ]);
 
+    /* istanbul ignore if */
     if (dbOps.statusCode === 404 || dbOps.resource === undefined) {
       throw new NotFoundError();
     }
