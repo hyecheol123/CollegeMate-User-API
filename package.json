@@ -60,7 +60,7 @@
     "mockdate": "^3.0.5",
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.1",
-    "typescript": "^5.1.6"
+    "typescript": "^5.2.2"
   },
   "dependencies": {
     "@azure/cosmos": "^3.17.3",
